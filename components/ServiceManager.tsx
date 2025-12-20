@@ -106,7 +106,7 @@ export const ServiceManager: React.FC<ServiceManagerProps> = ({ services, onTogg
           <p className="text-slate-400">Configure and control monitored applications.</p>
           <p className="text-sm font-bold text-rose-500 mt-1 flex items-center gap-1">
             <AlertOctagon className="w-4 h-4" />
-            System services in <span className="font-mono bg-rose-500/20 px-1 rounded">C:\Windows</span>, <span className="font-mono bg-rose-500/20 px-1 rounded">Program Files</span> and <span className="font-mono bg-rose-500/20 px-1 rounded">ProgramData</span> are hidden by default.
+            System services in <span className="font-mono bg-rose-500/20 px-1 rounded">C:\Windows</span>, <span className="font-mono bg-rose-500/20 px-1 rounded">C:\Program Files</span> and <span className="font-mono bg-rose-500/20 px-1 rounded">C:\ProgramData</span> are hidden by default.
           </p>
         </div>
         <div className="flex items-center gap-3">
