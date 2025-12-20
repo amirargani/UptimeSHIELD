@@ -1,8 +1,8 @@
-# 🛡️ REBOOTMASTER
+# 🛡️ UptimeSHIELD
 
 > **Ensuring 99.9% Uptime for Your Critical Applications.**
 
-REBOOTMASTER is a professional-grade monitoring dashboard designed to track, manage, and automatically recover Windows services. With integrated **AI-powered failure analysis** and a sleek, modern interface, it transforms complex system administration into a seamless experience.
+UptimeSHIELD is a professional-grade monitoring dashboard designed to track, manage, and automatically recover Windows services. With integrated **AI-powered failure analysis** and a sleek, modern interface, it transforms complex system administration into a seamless experience.
 
 ---
 
@@ -70,14 +70,14 @@ REBOOTMASTER is a professional-grade monitoring dashboard designed to track, man
 ## 🛠️ Configuration & Security
 
 ### 🔐 SSL/TLS Certificates
-REBOOTMASTER includes an automated security engine: [`ensure-certs.ps1`].
+UptimeSHIELD includes an automated security engine: [`ensure-certs.ps1`].
 
 - **Automated**: Runs on every `npm run dev`. Checks for `cert.pfx` and generates it if missing.
 - **Manual**: For custom certificates, place `cert.pem` and `key.pem` in `server/certs/`.
 - **Warning**: As we use self-signed certificates, you must accept the browser warning on first load.
 
 > [!TIP]
-> For a deep dive into the HTTPS architecture and manual generation commands, see the [Technical Documentation](file:///c:/Users/DEV/Downloads/REBOOTMASTER-DASHBOARD/TECHNICAL_README.md).
+> For a deep dive into the HTTPS architecture and manual generation commands, see the [Technical Documentation](file:///c:/Users/DEV/Downloads/UptimeSHIELD/TECHNICAL_README.md).
 
 ---
 
