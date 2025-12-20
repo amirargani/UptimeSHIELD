@@ -121,7 +121,9 @@ Please consult with your software developer or system administrator regarding th
 
 ---
 
-## 🚀 Changelog - v0.0.1-beta
+## Changelog 📜
+
+### v0.0.1-beta
 
 ### ✨ Features
 - **Initial Release Support**: Full integration with **React 19** and modern Vite tooling.
