@@ -10,7 +10,7 @@ export const analyzeLogFailure = async (log: LogEntry, service?: Service): Promi
   try {
     const prompt = `
       You are a Senior System Administrator and Reliability Engineer (SRE).
-      A critical service has failed in our monitoring system (REBOOTMASTER).
+      A critical service has failed in our monitoring system (UptimeSHIELD).
       
       Service Details:
       Name: ${service?.name || 'Unknown'}
@@ -52,7 +52,7 @@ export const generateHealthReport = async (services: Service[], logs: LogEntry[]
     const recentErrors = logs.filter(l => l.level === 'ERROR').slice(0, 5).map(l => l.message).join('\n');
 
     const prompt = `
-      Generate a brief system health report for the REBOOTMASTER dashboard.
+      Generate a brief system health report for the UptimeSHIELD dashboard.
       
       Services Status:
       ${serviceSummary}

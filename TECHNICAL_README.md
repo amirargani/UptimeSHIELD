@@ -1,4 +1,4 @@
-# 🛰️ REBOOTMASTER-DASHBOARD | Technical Architecture
+# 🛰️ UptimeSHIELD-DASHBOARD | Technical Architecture
 
 > **High-Availability Monitoring and Automated Service Recovery for Windows**
 

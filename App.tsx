@@ -13,21 +13,21 @@ import { LogViewer } from './components/LogViewer';
 import { Settings } from './components/Settings';
 import { AIAnalysisModal } from './components/AIAnalysisModal';
 import { analyzeLogFailure } from './services/geminiService';
-import logo from './logo/REBOOTMASTER-Logo.ico';
-import textLogo from './logo/REBOOTMASTER_Text Logo.png';
+import logo from './logo/UptimeSHIELD-Logo.ico';
+import textLogo from './logo/UptimeSHIELD_Text Logo.png';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
 
   // Load initial services from LocalStorage or use empty list
   const [services, setServices] = useState<Service[]>(() => {
-    const saved = localStorage.getItem('rebootmaster_services');
+    const saved = localStorage.getItem('UptimeSHIELD_services');
     return saved ? JSON.parse(saved) : [];
   });
 
   // Persist services to LocalStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('rebootmaster_services', JSON.stringify(services));
+    localStorage.setItem('UptimeSHIELD_services', JSON.stringify(services));
   }, [services]);
 
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -41,7 +41,7 @@ const App: React.FC = () => {
   // Settings
   const [settings, setSettings] = useState<AppSettings>({
     emailNotifications: true,
-    recipientEmail: 'admin@rebootmaster.local',
+    recipientEmail: 'admin@UptimeSHIELD.local',
     smtpServer: 'smtp.local',
     smtpPort: 587,
     smtpUser: '',
@@ -168,8 +168,8 @@ const App: React.FC = () => {
       <aside className="w-64 border-r border-slate-800 flex flex-col bg-[#000410]">
         <div className="p-6 border-b border-slate-800">
           <div className="flex items-center gap-2">
-            <img src={logo} className="w-9 h-10" alt="RebootMaster Logo" />
-            <img src={textLogo} className="h-8 mt-1" alt="RebootMaster" />
+            <img src={logo} className="w-9 h-10" alt="UptimeSHIELD Logo" />
+            <img src={textLogo} className="h-8 mt-1" alt="UptimeSHIELD" />
           </div>
           <div className="mt-4 flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${isMonitoring ? 'bg-green-500 animate-pulse' : 'bg-slate-500'}`} />
