@@ -121,7 +121,7 @@ Please consult with your software developer or system administrator regarding th
 
 ---
 
-## Changelog 📜
+## 📜 Changelog
 
 ### v0.0.1-beta
 
