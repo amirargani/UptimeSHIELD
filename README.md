@@ -68,7 +68,7 @@ UptimeSHIELD is a professional-grade monitoring dashboard designed to track, man
 
 1.  **Install Dependencies**:
     ```bash
-    npm install && cd server && npm install
+    npm run install:all
     ```
 
 2.  **Start Development**:
@@ -140,6 +140,8 @@ Please consult with your software developer or system administrator regarding th
 - **PFX Support**: Standardized on `.pfx` for robust Windows certificate handling.
 - **Secret Protection**: Updated `.gitignore` to prevent certificate and local environment leakage.
 - **Dependency Management**: Integrated `dotenv` and `concurrently` for a smoother development workflow.
+- **One-Click Setup**: Added `install:all` script to streamline both frontend and backend dependency installation.
+- **Naming Compliance**: Fixed `package.json` naming validation to comply with npm lowercase requirements.
 
 ---
 
