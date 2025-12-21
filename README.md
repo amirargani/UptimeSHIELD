@@ -119,6 +119,17 @@ USE_HTTPS=true
 ## 📝 Recommendation
 Please consult with your software developer or system administrator regarding the use of this platform in production environments.
 
+## 📘 Documentation
+
+For a deep dive into the technical aspects of UptimeSHIELD, please refer to our [Technical Documentation](TECHNICAL_README.md).
+
+It covers:
+- **Architecture**: In-depth look at the Frontend, Backend, and OS layers.
+- **PowerShell Bridge**: How we interact with Windows Services.
+- **Intelligence Layer**: Details on the Google Gemini AI integration.
+- **Security**: HTTPS setup and certificate management.
+- **Data Flow**: The journey of a monitoring request.
+
 ---
 
 ## 📜 Changelog
