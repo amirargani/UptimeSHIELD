@@ -169,7 +169,7 @@ const App: React.FC = () => {
         <div className="p-6 border-b border-slate-800">
           <div className="flex items-center gap-2">
             <img src={logo} className="w-9 h-10" alt="UptimeSHIELD Logo" />
-            <img src={textLogo} className="h-8 mt-1" alt="UptimeSHIELD" />
+            <img src={textLogo} className="h-12 mt-1" alt="UptimeSHIELD" />
           </div>
           <div className="mt-4 flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${isMonitoring ? 'bg-green-500 animate-pulse' : 'bg-slate-500'}`} />
