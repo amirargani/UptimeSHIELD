@@ -167,15 +167,9 @@ const App: React.FC = () => {
       {/* Sidebar */}
       <aside className="w-64 border-r border-slate-800 flex flex-col bg-[#000410]">
         <div className="p-6 border-b border-slate-800">
-          <div className="flex items-center gap-2">
-            <img src={logo} className="w-9 h-10" alt="UptimeSHIELD Logo" />
-            <img src={textLogo} className="h-12 mt-1" alt="UptimeSHIELD" />
-          </div>
-          <div className="mt-4 flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${isMonitoring ? 'bg-green-500 animate-pulse' : 'bg-slate-500'}`} />
-            <span className="text-xs text-slate-400 uppercase tracking-wide font-semibold">
-              {isMonitoring ? 'System Active' : 'System Offline'}
-            </span>
+          <div className="flex flex-col items-center">
+            <img src={logo} alt="UptimeSHIELD Logo" />
+            {/* <img src={textLogo} className="h-10" alt="UptimeSHIELD" /> */}
           </div>
         </div>
 
@@ -212,6 +206,15 @@ const App: React.FC = () => {
             {activeTab === 'settings' && 'Global Preferences'}
           </h2>
           <div className="flex items-center gap-4">
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-colors ${isMonitoring
+              ? 'bg-[rgba(34,197,94,0.1)] border-[rgba(34,197,94,0)]' // System Active
+              : 'bg-[rgba(239,68,68,0.1)] border-[rgba(239,68,68,0)]' // System Offline
+              }`}>
+              <div className={`w-2 h-2 rounded-full ${isMonitoring ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+              <span className={`text-xs font-mono ${isMonitoring ? 'text-green-400' : 'text-red-400'}`}>
+                {isMonitoring ? 'System Active' : 'System Offline'}
+              </span>
+            </div>
             <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 rounded-full border border-slate-800">
               <span className="w-2 h-2 rounded-full bg-blue-500"></span>
               <span className="text-xs font-mono text-slate-400">v0.0.1-beta</span> {/* TODO: v1.0.0-stable */}
