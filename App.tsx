@@ -14,7 +14,6 @@ import { Settings } from './components/Settings';
 import { AIAnalysisModal } from './components/AIAnalysisModal';
 import { analyzeLogFailure } from './services/geminiService';
 import logo from './logo/UptimeSHIELD-Logo.ico';
-import textLogo from './logo/UptimeSHIELD_Text Logo.png';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
@@ -169,7 +168,6 @@ const App: React.FC = () => {
         <div className="p-6 border-b border-slate-800">
           <div className="flex flex-col items-center">
             <img src={logo} alt="UptimeSHIELD Logo" />
-            {/* <img src={textLogo} className="h-10" alt="UptimeSHIELD" /> */}
           </div>
         </div>
 

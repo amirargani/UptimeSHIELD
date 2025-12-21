@@ -1,4 +1,4 @@
-# 🛰️ UptimeSHIELD-DASHBOARD | Technical Architecture
+# 🛰️ UptimeSHIELD | Technical Architecture
 
 > **High-Availability Monitoring and Automated Service Recovery for Windows**
 
