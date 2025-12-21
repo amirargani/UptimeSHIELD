@@ -50,7 +50,7 @@ export const LogViewer: React.FC<LogViewerProps> = ({ logs, onAnalyze }) => {
       <div className="flex-1 bg-[#000410] border border-slate-800 rounded-xl overflow-hidden flex flex-col shadow-inner font-mono text-sm relative">
         <div className="bg-slate-900 p-2 border-b border-slate-800 flex gap-2 items-center px-4">
           <Terminal className="w-4 h-4 text-slate-500" />
-          <span className="text-slate-500 text-xs">/var/log/UptimeSHIELD/sys.log</span>
+          <span className="text-slate-500 text-xs">UptimeSHIELD/log/</span>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-1">

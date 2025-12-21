@@ -52,7 +52,7 @@ export const generateHealthReport = async (services: Service[], logs: LogEntry[]
     const recentErrors = logs.filter(l => l.level === 'ERROR').slice(0, 5).map(l => l.message).join('\n');
 
     const prompt = `
-      Generate a brief system health report for the UptimeSHIELD dashboard.
+      Generate a brief system health report for the UptimeSHIELD.
       
       Services Status:
       ${serviceSummary}

@@ -1,5 +1,5 @@
 {
-  "name": "UptimeSHIELD Dashboard",
+  "name": "UptimeSHIELD",
   "description": "A robust service monitoring dashboard that simulates the UptimeSHIELD functionality, tracking service health, auto-restarting processes, and providing AI-powered log analysis for troubleshooting.",
   "requestFramePermissions": []
 }
