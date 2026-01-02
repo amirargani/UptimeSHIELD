@@ -25,6 +25,22 @@ To start the entire system (Frontend + Backend) with zero-configuration:
         - **Frontend**: `https://localhost:3000`
         - **Backend**: `https://localhost:3001`
 
+3.  **Production Deployment**:
+    ```bash
+    npm run build
+    npm start
+    ```
+    - **Architecture**:
+        - `vite build` compiles the React app into the static `/dist` folder.
+        - `node server/server.js` starts the Express server.
+        - **Static Serving**: The Express server is configured to serve the contents of `/dist` as static assets.
+        - **Client-Side Routing**: A catch-all route (`*`) in Express ensures that all non-API requests are directed to `index.html`, enabling proper React Router behavior.
+    - **Benefits**:
+        - Eliminates the "Using Development Build" warning from React.
+        - Optimized asset minification and bundling for performance.
+        - Single-process execution (only Node.js needed, no separate Vite server).
+
+
 ---
 
 ## ⌨️ Manual Setup & Configuration
