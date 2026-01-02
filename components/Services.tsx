@@ -1,6 +1,6 @@
 import React from 'react';
 import { Service, ServiceStatus } from '../types';
-import { Play, Square, RotateCw, Trash2, Plus, Zap, AlertOctagon, Download, Upload, Eye } from 'lucide-react';
+import { Play, Square, RotateCw, Trash2, Plus, Zap, AlertOctagon, Download, Upload, Eye, Info, AlertTriangle } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
@@ -25,6 +25,7 @@ interface ServicesProps {
 export const Services: React.FC<ServicesProps> = ({ services, onToggleStatus, onRemove, onAdd, onImport, onRestart, onClearAll }) => {
     const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = React.useState(false);
+    const [isPathModalOpen, setIsPathModalOpen] = React.useState(false);
     const [isFetching, setIsFetching] = React.useState(false);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -167,44 +168,25 @@ export const Services: React.FC<ServicesProps> = ({ services, onToggleStatus, on
                     <Alert
                         variant={showHiddenServices ? 'success' : 'destructive'}
                         className={`mt-3 w-full lg:w-fit py-2 px-3 ${showHiddenServices ? '!bg-[rgba(34,197,94,0.1)] !border-[rgba(34,197,94,0)]' : '!bg-[rgba(239,68,68,0.1)] !border-[rgba(239,68,68,0)]'}`}
-                        icon={showHiddenServices ? <Eye size={16} /> : <AlertOctagon size={16} />}
+                        icon={
+                            <button
+                                onClick={() => setIsPathModalOpen(true)}
+                                className="text-current hover:opacity-80 transition-opacity"
+                            >
+                                <AlertTriangle size={20} className="animate-pulse" />
+                            </button>
+                        }
                     >
-                        <div className="flex items-center justify-between lg:justify-start gap-4 w-full">
-                            <div className="flex items-center flex-wrap gap-2 text-[10px] font-black uppercase tracking-widest">
-                                System services in are {showHiddenServices ? 'SHOWN' : 'HIDDEN'}.
+                        <div className="flex items-center justify-between gap-4 w-full">
+                            <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest">
+                                <span>System services in are {showHiddenServices ? 'SHOWN' : 'HIDDEN'}.</span>
                             </div>
                             <Switch checked={showHiddenServices} onChange={setShowHiddenServices} variant={showHiddenServices ? 'success' : 'danger'} />
                         </div>
                     </Alert>
                 </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2 mt-2">
-                <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">
-                    {showHiddenServices ? 'Included paths:' : 'Excluded paths:'}
-                </span>
-                <Badge
-                    variant={showHiddenServices ? "success" : "danger"}
-                    animate
-                    className={`text-[10px] px-2 py-0.5 ${showHiddenServices ? '!bg-[rgba(34,197,94,0.1)] !border-[rgba(34,197,94,0)]' : '!bg-[rgba(239,68,68,0.1)] !border-[rgba(239,68,68,0)]'}`}
-                >
-                    "C:\Windows"
-                </Badge>
-                <Badge
-                    variant={showHiddenServices ? "success" : "danger"}
-                    animate
-                    className={`text-[10px] px-2 py-0.5 ${showHiddenServices ? '!bg-[rgba(34,197,94,0.1)] !border-[rgba(34,197,94,0)]' : '!bg-[rgba(239,68,68,0.1)] !border-[rgba(239,68,68,0)]'}`}
-                >
-                    "C:\Program Files"
-                </Badge>
-                <Badge
-                    variant={showHiddenServices ? "success" : "danger"}
-                    animate
-                    className={`text-[10px] px-2 py-0.5 ${showHiddenServices ? '!bg-[rgba(34,197,94,0.1)] !border-[rgba(34,197,94,0)]' : '!bg-[rgba(239,68,68,0.1)] !border-[rgba(239,68,68,0)]'}`}
-                >
-                    "C:\ProgramData"
-                </Badge>
-            </div>
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+            <div className="flex flex-col sm:flex-row items-center sm:justify-end gap-3 w-full lg:w-auto">
                 <input
                     type="file"
                     ref={fileInputRef}
@@ -212,7 +194,7 @@ export const Services: React.FC<ServicesProps> = ({ services, onToggleStatus, on
                     className="hidden"
                     accept=".json"
                 />
-                <div className="flex w-full sm:w-auto justify-between sm:justify-start bg-[#000410]/50 backdrop-blur-md border border-white/5 rounded-xl p-1 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
+                <div className="flex w-full sm:w-auto justify-between sm:justify-start bg-[#000410]/50 backdrop-blur-md border border-white/5 rounded-xl p-1 gap-2 sm:gap-1 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
                     <Button variant="ghost" size="icon" onClick={() => handleExport()} title="Export Config">
                         <Download size={18} />
                     </Button>
@@ -225,10 +207,10 @@ export const Services: React.FC<ServicesProps> = ({ services, onToggleStatus, on
                         size="md"
                         onClick={fetchServices}
                         isLoading={isFetching}
-                        className="flex-1 sm:flex-initial"
+                        className="flex-1 sm:flex-initial min-w-0"
                     >
-                        <Zap className="w-4 h-4 mr-2" />
-                        Smart Fetch
+                        <Zap className="w-4 h-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Smart Fetch</span>
                     </Button>
                     <div className="w-px bg-slate-800 mx-1 my-1" />
                     {onClearAll && (
@@ -242,10 +224,10 @@ export const Services: React.FC<ServicesProps> = ({ services, onToggleStatus, on
                                 }
                                 setIsDeleteConfirmOpen(true);
                             }}
-                            className="flex-1 sm:flex-initial"
+                            className="flex-1 sm:flex-initial min-w-0"
                         >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete All
+                            <Trash2 className="w-4 h-4 sm:mr-2" />
+                            <span className="hidden sm:inline">Delete All</span>
                         </Button>
                     )}
                 </div>
@@ -391,6 +373,46 @@ export const Services: React.FC<ServicesProps> = ({ services, onToggleStatus, on
                             }}
                         >
                             Delete All
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+            <Modal
+                isOpen={isPathModalOpen}
+                onClose={() => setIsPathModalOpen(false)}
+                title={showHiddenServices ? 'Included System Paths' : 'Excluded System Paths'}
+                maxWidth="md"
+            >
+                <div className="space-y-4">
+                    <p className="text-slate-300 text-sm">
+                        The following system paths are {showHiddenServices ? 'included' : 'excluded'} from the service scan:
+                    </p>
+                    <div className="flex flex-col gap-3">
+                        <Badge
+                            variant={showHiddenServices ? "success" : "danger"}
+                            animate
+                            className={`text-sm px-3 py-2 ${showHiddenServices ? '!bg-[rgba(34,197,94,0.1)] !border-[rgba(34,197,94,0)]' : '!bg-[rgba(239,68,68,0.1)] !border-[rgba(239,68,68,0)]'}`}
+                        >
+                            "C:\Windows"
+                        </Badge>
+                        <Badge
+                            variant={showHiddenServices ? "success" : "danger"}
+                            animate
+                            className={`text-sm px-3 py-2 ${showHiddenServices ? '!bg-[rgba(34,197,94,0.1)] !border-[rgba(34,197,94,0)]' : '!bg-[rgba(239,68,68,0.1)] !border-[rgba(239,68,68,0)]'}`}
+                        >
+                            "C:\Program Files"
+                        </Badge>
+                        <Badge
+                            variant={showHiddenServices ? "success" : "danger"}
+                            animate
+                            className={`text-sm px-3 py-2 ${showHiddenServices ? '!bg-[rgba(34,197,94,0.1)] !border-[rgba(34,197,94,0)]' : '!bg-[rgba(239,68,68,0.1)] !border-[rgba(239,68,68,0)]'}`}
+                        >
+                            "C:\ProgramData"
+                        </Badge>
+                    </div>
+                    <div className="flex justify-end pt-2">
+                        <Button variant="ghost" onClick={() => setIsPathModalOpen(false)}>
+                            Close
                         </Button>
                     </div>
                 </div>
