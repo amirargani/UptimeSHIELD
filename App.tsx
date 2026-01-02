@@ -223,7 +223,7 @@ const App: React.FC = () => {
               setIsMonitoring(!isMonitoring);
               addLog('INFO', isMonitoring ? 'Monitoring stopped by operational command.' : 'Monitoring engine initialized.');
             }}
-            variant={isMonitoring ? "outline" : "primary"}
+            variant={isMonitoring ? "destructive" : "primary"}
             className={`w-full h-14 text-xs font-black uppercase tracking-[0.2em] transition-all duration-500 ${isMonitoring ? 'border-red-500/30 text-red-500 hover:bg-red-500 hover:text-white' : ''}`}
           >
             {isMonitoring ? (
