@@ -37,4 +37,4 @@ export interface AppSettings {
   maxRetries: number;
 }
 
-export type Tab = 'dashboard' | 'services' | 'logs' | 'settings' | 'ai-analysis';
+export type View = 'overview' | 'services' | 'logs' | 'configuration' | 'ai-analysis';

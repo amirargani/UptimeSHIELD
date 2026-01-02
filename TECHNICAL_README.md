@@ -10,11 +10,10 @@ To start the entire system (Frontend + Backend) with zero-configuration:
 
 1.  **Install Dependencies**:
     ```bash
-    # Root directory
-    npm install
-    # Server directory
-    cd server && npm install
+    npm run install:all
     ```
+
+    > **Clean Install**: If you need to reset the project, use `npm run uninstall:all` to remove all dependencies and artifacts before re-installing.
 
 2.  **Start Development**:
     ```bash
@@ -38,7 +37,7 @@ If you prefer to generate certificates manually or use your own, place them in `
   openssl req -x509 -newkey rsa:4096 -keyout server/certs/key.pem -out server/certs/cert.pem -nodes -days 365 -subj "/CN=localhost"
   ```
 - **PowerShell (PFX Container)**:
-  The system uses `cert.pfx` with the default password `password`.
+  The system uses `cert.pfx` with the generated password found in `server/certs/PASSWORD.md`.
 
 ---
 
@@ -46,11 +45,11 @@ If you prefer to generate certificates manually or use your own, place them in `
 
 The system supports a dynamic security layer that can be toggled using environment variables.
 
--   **Environment Variable**: `USE_HTTPS` (defaults to `true`). Set to `false` in `.env` to disable.
+-   **Environment Variable**: `USE_HTTPS` (defaults to `false`). Set to `false` for standard HTTP (no encryption).
 -   **Automation Script**: [`ensure-certs.ps1`]
     -   **Execution Strategy**: Prioritizes OpenSSL (via Git Bash/System Path) for standard PEM generation. Falls back to native `New-SelfSignedCertificate` on Windows systems without OpenSSL.
     -   **PFX Conversion**: Automatically packages PEM files into a `.pfx` container for native Node.js/Windows compatibility.
-    -   **Cert Password**: All automated PFX exports use `password` as the passphrase for development consistency.
+    -   **Cert Password**: Generates a random, strong password on first run (stored in `server/certs/PASSWORD.md`) for enhanced security, instead of using a hardcoded default.
 -   **Server Logic**:
     -   **Backend**: `server.js` checks filesystem for `cert.pfx` or `cert.pem`/`key.pem` pairs. It initializes `https` only if `USE_HTTPS` is `true` AND files are present.
     -   **Frontend**: Vite config injects SSL configuration into the dev server dynamically.
@@ -83,8 +82,8 @@ GEMINI_API_KEY=PLACEHOLDER_API_KEY
 ```mermaid
 graph TD
   subgraph subGraph0["Frontend Layer"]
-        UI["Dashboard UI"]
-        Manager["Service Manager"]
+        UI["Overview UI"]
+        Manager["Services Manager"]
         SIM["Simulation Engine"]
   end
 
@@ -118,14 +117,39 @@ graph TD
 
 ---
 
+## 🎨 Atomic Design System Architecture
+
+The UptimeSHIELD UI is built on a strict **Atomic Design** philosophy, centralized within the `components/ui` directory. This ensures visual consistency and rapid development.
+
+### 🧩 Atoms (Primitives)
+These are stateless, reusable components that form the building blocks of the application. They are designed to be "dumb" regarding business logic but "smart" regarding theming and interactivity.
+
+| Atom | Description | Features |
+| :--- | :--- | :--- |
+| **Button** | Interactive triggers | Multi-variant (primary, ghost, danger), Loading states, Icon support. |
+| **Card** | Content containers | Standardized padding, borders, and background opacity. |
+| **Badge** | Status indicators | Animated pulses for active states, semantic coloring (Safety/Danger). |
+| **Input** | Data entry | Floating labels, error state handling, focus management. |
+| **Modal** | Overlays | Full-screen blurred backdrop, scroll locking, z-index management. |
+
+### 🏗️ Composition Strategy
+- **Molecules**: Atoms are combined to form functional units (e.g., a `SearchInput` combines `Input` + `Icon`).
+- **Organisms**: Complex sections like the `ServiceManager` table row.
+- **Templates**: The high-level page layouts (`Overview.tsx`, `Services.tsx`).
+
+> **Dev Note**: When adding new UI features, always check `components/ui` first. Do not introduce raw HTML/Tailwind classes for buttons or inputs; use the atoms to maintain the "Command Center" aesthetic.
+
+---
+
 ## 📊 Core Inventory
 
 | Module | Purpose | File |
 | :--- | :--- | :--- |
 | **Logic Hub** | Global state & Simulation engine | [App.tsx] |
-| **Admin Panel** | CRUD, Import/Export & Discovery | [ServiceManager.tsx] |
+| **Admin Panel** | CRUD, Import/Export & Discovery | [Services.tsx] |
 | **Service Bridge** | OS-level PowerShell execution | [server.js] |
 | **AI Diagnostics** | Gemini Flash 2.5 Log Analysis | [AIAnalysisModal.tsx] |
+| **System Config** | Settings & Notifications | [Configuration.tsx] |
 
 ---
 
@@ -143,23 +167,30 @@ This is the "Brain" of the application.
 - **Heartbeat Loop**: Runs a continuous monitoring check (adjustable interval) to verify service health.
 - **Recovery Logic**: Automatically transitions services from `FAILED` to `RESTARTING` based on configured thresholds.
 
-#### `ServiceManager.tsx`
+#### `Services.tsx`
 A robust interface for service lifecycle management.
 - **Smart Filtering**: The `filterExternalServices` function applies a whitelist/blacklist approach:
     - **Hidden Paths**: `C:\Windows`, `C:\Program Files`, `C:\ProgramData`.
     - **Rationale**: To reduce "system noise" and focus exclusively on user-installed applications.
 - **Bulk Actions**: Support for importing complex monitoring topologies via JSON.
+- **Data Integrity**: Built-in duplicate detection logic prevents redundant entries during both "Smart Fetch" and manual addition.
+- **Micro-Interactions**: Replaced native imperative `alert()` calls with a declarative, state-driven Toast notification system (`z-[100]`) that floats above all layers (including Modals).
 
-#### `Dashboard.tsx` & `LogViewer.tsx`
+#### `Overview.tsx` & `Logs.tsx`
 The visualization suite.
 - **Metrics**: Real-time aggregation of uptime percentages and failure counts.
 - **Event Stream**: A high-performance log terminal with built-in hooks for AI analysis.
+
+#### `Configuration.tsx`
+The central control panel for system behavior.
+- **Notification Engine**: Manages SMTP relay settings for critical alerts.
+- **Threshold Tuning**: Configures the `checkInterval` and `autoRestart` resilience policies.
 
 ---
 
 ## ⚡ Data Flow Pipeline
 
-1.  **Detection**: `ServiceManager` calls `server.js` ➡️ PowerShell scans the OS.
+1.  **Detection**: `Services` calls `server.js` ➡️ PowerShell scans the OS.
 2.  **Mapping**: Raw OS data is transformed into the typed `Service` object.
 3.  **Monitoring**: `App.tsx` triggers the simulation/check loop.
 4.  **Recovery**: If a failure is detected, the `autoRestart` logic attempts 1-10 retries.
