@@ -1,7 +1,7 @@
 # 🛡️ UptimeSHIELD
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-D22128?style=for-the-badge&logo=apache)](LICENSE.txt)
-[![Version](https://img.shields.io/badge/Version-0.0.1--beta-orange?style=for-the-badge)](https://github.com/amirargani/UptimeSHIELD/releases)
+[![Version](https://img.shields.io/badge/Version-0.0.2--beta-orange?style=for-the-badge)](https://github.com/amirargani/UptimeSHIELD/releases)
 [![Platform](https://img.shields.io/badge/Platform-Windows-0078D4?style=for-the-badge&logo=windows)](https://www.microsoft.com/windows)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
@@ -9,6 +9,7 @@
 [![Vite](https://img.shields.io/badge/Vite-6.2-646CFF?style=for-the-badge&logo=vite)](https://vitejs.dev/)
 [![Express](https://img.shields.io/badge/Express-5.2-000000?style=for-the-badge&logo=express)](https://expressjs.com/)
 [![Lucide Icons](https://img.shields.io/badge/Lucide_Icons-latest-orange?style=for-the-badge&logo=lucide)](https://lucide.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
 [![Google Gemini](https://img.shields.io/badge/Google_Gemini-AI-4285F4?style=for-the-badge&logo=googlegemini)](https://deepmind.google/technologies/gemini/)
 [![Recharts](https://img.shields.io/badge/Recharts-3.6-22b5bf?style=for-the-badge)](https://recharts.org/)
 
@@ -41,10 +42,10 @@ UptimeSHIELD is a professional-grade monitoring dashboard designed to track, man
 
 ### 🎨 Frontend Components (`/components`)
 -   `AIAnalysisModal.tsx`: The AI brain for diagnosing service failures.
--   `Dashboard.tsx`: High-level operational overview and metrics.
--   `ServiceManager.tsx`: The command center for service control and discovery.
--   `LogViewer.tsx`: Detailed forensic analysis of system events.
--   `Settings.tsx`: Global configuration and notification preferences.
+-   `Overview.tsx`: High-level operational overview and metrics.
+-   `Services.tsx`: The command center for service control and discovery.
+-   `Logs.tsx`: Detailed forensic analysis of system events.
+-   `Configuration.tsx`: Global configuration and notification preferences.
 
 ### ⚙️ Backend Services
 -   **`/server`**: A Node.js Express server (`v1.0.0`) bridge using PowerShell for deep system integration.
@@ -57,7 +58,7 @@ UptimeSHIELD is a professional-grade monitoring dashboard designed to track, man
 | Domain | Technology |
 | :--- | :--- |
 | **Frontend** | React (v19) • TypeScript • Vite |
-| **Styling** | Vanilla CSS • Tailwind-like Utilities • Lucide Icons |
+| **Styling** | Vanilla CSS • Tailwind CSS (via CDN) • Lucide Icons |
 | **Backend** | Node.js • Express • PowerShell CLI |
 | **AI** | Google Gemini Generative AI |
 | **Visualization** | Recharts |
@@ -70,6 +71,7 @@ UptimeSHIELD is a professional-grade monitoring dashboard designed to track, man
     ```bash
     npm run install:all
     ```
+    > **Tip**: Need a fresh start? Run `npm run uninstall:all` to completely reset the project dependencies.
 
 2.  **Start Development**:
     ```bash
@@ -97,13 +99,13 @@ UptimeSHIELD includes an automated security engine: [`ensure-certs.ps1`].
 
 The project uses environment variables for configuration and security.
 
-- **`.env`**: Global settings. Used for `USE_HTTPS` (defaults to `true`).
+- **`.env`**: Global settings. Used for `USE_HTTPS` (defaults to `false` — runs in standard HTTP mode).
 - **`.env.local`**: Local overrides and sensitive keys (e.g., `GEMINI_API_KEY`). **Do not commit this file.**
 
 ```env
 # Example .env.local
 GEMINI_API_KEY=your_key_here
-USE_HTTPS=true
+USE_HTTPS=false
 ```
 
 ---
@@ -134,6 +136,42 @@ It covers:
 
 ## 📜 Changelog
 
+### v0.0.2-beta
+
+### 🎨 Atomic UI & Design
+- **Architecture**: Implemented a scalable component-based design system for maximum maintainability.
+- **Component Suite**: Developed reusable UI Atoms including `Button`, `Card`, `Badge`, `Input`, `Label`, `Modal`, `Table`, and `Switch`, `NavButton`, `Toast`.
+- **Modernization**: Systematic refactor of all core views (`Dashboard`, `ServiceManager`, `LogViewer`, `Settings`, `App`) to enterprise-grade standards.
+- **Visuals**: Established a consistent high-tech "Command Center" aesthetic with dark-mode optimization and smooth micro-animations.
+- **Notifications**: Integrated a non-intrusive "Toast" notification system (`z-[100]`), replacing native browser alerts for a smoother user experience.
+- **Duplicate Detection**: Smart logic in service discovery preventing the addition of duplicate services during scans or manual entry.
+
+### ⚙️ System & Performance
+- **Compatibility**: Enhanced backend service discovery and refined the `install:all` script for robust Windows compatibility.
+- **Maintenance**: Added `uninstall:all` script to recursively clean up all `node_modules`, lockfiles, and certificates for a complete project reset.
+- **Verification**: Verified the entire codebase with a zero-error production build pass.
+
+### ✨ UI Polish & Semantic Refactoring
+- **Focus-Free Design**: Removed distracting focus rings from all interactive elements (buttons, inputs) for a cleaner, minimal aesthetic.
+- **Enhanced Controls**: Redesigned service operation buttons (Play/Pause/Restart) to be circular, glass-morphic, and semantically colored.
+- **Semantic Standardization**: Renamed core view components to align with internal state identifiers for better code readability:
+    - `Dashboard.tsx` -> `Overview.tsx`
+    - `ServiceManager.tsx` -> `Services.tsx`
+    - `LogViewer.tsx` -> `Logs.tsx`
+    - `Settings.tsx` -> `Configuration.tsx`
+
+### 🚀 Advanced Features (New)
+- **Hidden Services Manager**: Toggle switch to reveal/hide system services (C:\Windows, etc.) with real-time UI feedback and `localStorage` persistence.
+- **Bulk Operations**: Added 'Delete All' capability with custom confirmation modal and empty-state safety checks.
+- **Glassy Aesthetic**: Premium UI refinement with glassy backgrounds, transparent borders, and blue-glow focus states for all Inputs and Buttons.
+- **Smart Modal**: 'Add Service' modal now intelligently respects global filter settings.
+- **Smart Navigation**: Sidebar state (`activeView`) is now persisted via `localStorage`, returning you to your last context upon reload.
+- **Mobile First**: Fully responsive layout with a dedicated mobile drawer navigation and touch-optimized controls.
+- **Living Brand**: Enhanced logo styling with pulse animations and dynamic glow effects.
+- **Overview Visualization**: Replaced bar charts with elegant mini sparkline charts showing uptime trends for top 5 running services with status-based color coding and glow effects.
+
+### 🐛 Bug Fixes
+- **PowerShell Script**: Fixed a syntax error in `ensure-certs.ps1` (removed invalid parentheses from function call) to ensure reliable random password generation for certificates.
 ### v0.0.1-beta
 
 ### ✨ Features
@@ -141,10 +179,11 @@ It covers:
 - **PowerShell Auto-Fetch**: Command-center feature to scan and import machine services instantly.
 - **AI Diagnostics**: Integrated **Google Gemini AI** for intelligent failure analysis and recovery steps.
 - **HTTPS Encryption**: End-to-end SSL/TLS for both Frontend (Vite) and Backend (Express).
-- **Protocol Toggle**: Switched to HTTPS by default with a `USE_HTTPS` toggle in `.env`.
+- **Protocol Toggle**: Switched to HTTPS (configurable via `USE_HTTPS` in `.env`).
 - **Automated Certificates**: New `ensure-certs.ps1` script for one-click SSL setup.
 - **Smart Filtering & UI Hint**: Intelligent path filtering for Windows services with a prominent, red high-visibility hint in the UI.
 - **Real-Time Dashboards**: Interactive metrics and uptime visualization using Recharts.
+- **Styling Optimization**: Standardized styling using Tailwind CSS, removing redundant classes and improving maintainability.
 
 ### 🛡️ Security & Stability
 - **Graceful Fallback**: Automatic detection of missing certs with fallback to HTTP.

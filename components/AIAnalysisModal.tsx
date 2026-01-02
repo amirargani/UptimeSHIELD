@@ -1,6 +1,8 @@
 import React from 'react';
-import { Bot, X, FileText, Activity } from 'lucide-react';
+import { Bot, FileText, Activity } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { Modal } from './ui/Modal';
+import { Button } from './ui/Button';
 
 interface AIAnalysisModalProps {
     isOpen: boolean;
@@ -10,41 +12,43 @@ interface AIAnalysisModalProps {
 }
 
 export const AIAnalysisModal: React.FC<AIAnalysisModalProps> = ({ isOpen, onClose, content, isLoading }) => {
-    if (!isOpen) return null;
-
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-            <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
-                <div className="flex items-center justify-between p-6 border-b border-slate-800">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-purple-600/20 p-2 rounded-lg">
-                            <Bot className="w-6 h-6 text-purple-400" />
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-bold text-slate-100">Gemini Diagnostics</h3>
-                            <p className="text-xs text-slate-400">Automated log analysis & troubleshooting</p>
-                        </div>
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Gemini Diagnostics"
+            maxWidth="2xl"
+        >
+            <div className="space-y-6">
+                <div className="flex items-center gap-4 p-4 bg-purple-600/5 border border-purple-500/10 rounded-xl">
+                    <div className="bg-purple-600/20 p-2.5 rounded-lg shadow-lg shadow-purple-900/20">
+                        <Bot size={24} className="text-purple-400" />
                     </div>
-                    <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">
-                        <X className="w-6 h-6" />
-                    </button>
+                    <div>
+                        <h4 className="text-sm font-black text-slate-100 uppercase tracking-tight">AI Diagnostic Report</h4>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Automated log analysis & troubleshooting</p>
+                    </div>
                 </div>
 
-                <div className="p-6 overflow-y-auto flex-1 text-slate-300">
+                <div className="text-slate-300 leading-relaxed min-h-[200px]">
                     {isLoading ? (
-                        <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                            <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                            <p className="text-sm text-purple-300 animate-pulse">Analyzing log patterns with Gemini AI...</p>
+                        <div className="flex flex-col items-center justify-center py-20 space-y-6">
+                            <div className="relative">
+                                <div className="w-12 h-12 border-4 border-purple-500/10 rounded-full" />
+                                <div className="absolute inset-0 w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                            </div>
+                            <p className="text-xs font-black uppercase tracking-[0.2em] text-purple-400 animate-pulse">Analyzing failure patterns...</p>
                         </div>
                     ) : (
                         <div className="prose prose-invert prose-sm max-w-none">
                             <ReactMarkdown
                                 components={{
-                                    h1: ({ node, ...props }) => <h1 className="text-xl font-bold text-purple-300 mb-4" {...props} />,
-                                    h2: ({ node, ...props }) => <h2 className="text-lg font-semibold text-slate-200 mt-6 mb-3 border-b border-slate-800 pb-2" {...props} />,
-                                    ul: ({ node, ...props }) => <ul className="list-disc pl-5 space-y-2 text-slate-300" {...props} />,
-                                    li: ({ node, ...props }) => <li className="marker:text-purple-500" {...props} />,
-                                    strong: ({ node, ...props }) => <strong className="text-white font-semibold" {...props} />
+                                    h1: ({ ...props }) => <h1 className="text-lg font-black text-purple-400 mb-6 uppercase tracking-tight border-b border-purple-500/10 pb-2" {...props} />,
+                                    h2: ({ ...props }) => <h2 className="text-base font-bold text-slate-100 mt-8 mb-4 border-l-4 border-purple-500/40 pl-3" {...props} />,
+                                    ul: ({ ...props }) => <ul className="list-disc pl-5 space-y-3 text-slate-400" {...props} />,
+                                    li: ({ ...props }) => <li className="marker:text-purple-500 font-medium" {...props} />,
+                                    strong: ({ ...props }) => <strong className="text-slate-100 font-black tracking-tight" {...props} />,
+                                    p: ({ ...props }) => <p className="mb-4 text-slate-400" {...props} />
                                 }}
                             >
                                 {content}
@@ -53,19 +57,20 @@ export const AIAnalysisModal: React.FC<AIAnalysisModalProps> = ({ isOpen, onClos
                     )}
                 </div>
 
-                <div className="p-4 bg-[#000410] border-t border-slate-800 rounded-b-xl flex justify-between items-center text-xs text-slate-500">
-                    <span className="flex items-center gap-1">
-                        <Activity className="w-3 h-3" />
-                        Analysis generated by Google Gemini 2.5 Flash
+                <div className="flex items-center justify-between pt-6 border-t border-slate-800">
+                    <span className="flex items-center gap-2 text-[10px] font-bold text-slate-600 uppercase tracking-widest">
+                        <Activity size={12} className="text-purple-500" />
+                        Analysis by Gemini 2.0 Flash
                     </span>
-                    <button
+                    <Button
                         onClick={onClose}
-                        className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition-colors font-medium"
+                        variant="secondary"
+                        className="px-6 py-2 h-9 text-[10px] font-black uppercase tracking-[0.1em]"
                     >
-                        Close Report
-                    </button>
+                        Dismiss Report
+                    </Button>
                 </div>
             </div>
-        </div>
+        </Modal>
     );
 };
