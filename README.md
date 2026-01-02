@@ -79,6 +79,14 @@ UptimeSHIELD is a professional-grade monitoring dashboard designed to track, man
     ```
     *This will automatically generate certificates, start the backend (Port 3001), and the web console (Port 3000).*
 
+3.  **Production Deployment**:
+    To run the optimized production build (eliminates "development build" warnings):
+    ```bash
+    npm run build
+    npm start
+    ```
+    *Builds the React app to `/dist` and starts the Express server serving static files at `http://localhost:3001`.*
+
 ---
 
 ## 🛠️ Configuration & Security
@@ -150,6 +158,7 @@ It covers:
 - **Compatibility**: Enhanced backend service discovery and refined the `install:all` script for robust Windows compatibility.
 - **Maintenance**: Added `uninstall:all` script to recursively clean up all `node_modules`, lockfiles, and certificates for a complete project reset.
 - **Verification**: Verified the entire codebase with a zero-error production build pass.
+- **Production Ready**: Added `npm start` script and server configuration to serve the optimized production build, eliminating development warnings.
 
 ### ✨ UI Polish & Semantic Refactoring
 - **Focus-Free Design**: Removed distracting focus rings from all interactive elements (buttons, inputs) for a cleaner, minimal aesthetic.
