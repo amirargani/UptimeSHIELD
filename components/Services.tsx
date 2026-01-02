@@ -171,73 +171,92 @@ export const Services: React.FC<ServicesProps> = ({ services, onToggleStatus, on
                     >
                         <div className="flex items-center justify-between lg:justify-start gap-4 w-full">
                             <div className="flex items-center flex-wrap gap-2 text-[10px] font-black uppercase tracking-widest">
-                                System services
-                                {!showHiddenServices && (
-                                    <>
-                                        in
-                                        <Badge variant="danger" animate className="text-[9px] px-2 py-0.5 !bg-[rgba(239,68,68,0.1)] !border-[rgba(239,68,68,0)]">"C:\Windows"</Badge>
-                                    </>
-                                )}
-                                are {showHiddenServices ? 'SHOWN' : 'HIDDEN'}.
+                                System services in are {showHiddenServices ? 'SHOWN' : 'HIDDEN'}.
                             </div>
                             <Switch checked={showHiddenServices} onChange={setShowHiddenServices} variant={showHiddenServices ? 'success' : 'danger'} />
                         </div>
                     </Alert>
                 </div>
-                <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleImport}
-                        className="hidden"
-                        accept=".json"
-                    />
-                    <div className="flex w-full sm:w-auto justify-between sm:justify-start bg-[#000410]/50 backdrop-blur-md border border-white/5 rounded-xl p-1 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
-                        <Button variant="ghost" size="icon" onClick={() => handleExport()} title="Export Config">
-                            <Download size={18} />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} title="Import Config">
-                            <Upload size={18} />
-                        </Button>
-                        <div className="w-px bg-slate-800 mx-1 my-1" />
+            </div>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+                <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">
+                    {showHiddenServices ? 'Included paths:' : 'Excluded paths:'}
+                </span>
+                <Badge
+                    variant={showHiddenServices ? "success" : "danger"}
+                    animate
+                    className={`text-[10px] px-2 py-0.5 ${showHiddenServices ? '!bg-[rgba(34,197,94,0.1)] !border-[rgba(34,197,94,0)]' : '!bg-[rgba(239,68,68,0.1)] !border-[rgba(239,68,68,0)]'}`}
+                >
+                    "C:\Windows"
+                </Badge>
+                <Badge
+                    variant={showHiddenServices ? "success" : "danger"}
+                    animate
+                    className={`text-[10px] px-2 py-0.5 ${showHiddenServices ? '!bg-[rgba(34,197,94,0.1)] !border-[rgba(34,197,94,0)]' : '!bg-[rgba(239,68,68,0.1)] !border-[rgba(239,68,68,0)]'}`}
+                >
+                    "C:\Program Files"
+                </Badge>
+                <Badge
+                    variant={showHiddenServices ? "success" : "danger"}
+                    animate
+                    className={`text-[10px] px-2 py-0.5 ${showHiddenServices ? '!bg-[rgba(34,197,94,0.1)] !border-[rgba(34,197,94,0)]' : '!bg-[rgba(239,68,68,0.1)] !border-[rgba(239,68,68,0)]'}`}
+                >
+                    "C:\ProgramData"
+                </Badge>
+            </div>
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImport}
+                    className="hidden"
+                    accept=".json"
+                />
+                <div className="flex w-full sm:w-auto justify-between sm:justify-start bg-[#000410]/50 backdrop-blur-md border border-white/5 rounded-xl p-1 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
+                    <Button variant="ghost" size="icon" onClick={() => handleExport()} title="Export Config">
+                        <Download size={18} />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} title="Import Config">
+                        <Upload size={18} />
+                    </Button>
+                    <div className="w-px bg-slate-800 mx-1 my-1" />
+                    <Button
+                        variant="secondary"
+                        size="md"
+                        onClick={fetchServices}
+                        isLoading={isFetching}
+                        className="flex-1 sm:flex-initial"
+                    >
+                        <Zap className="w-4 h-4 mr-2" />
+                        Smart Fetch
+                    </Button>
+                    <div className="w-px bg-slate-800 mx-1 my-1" />
+                    {onClearAll && (
                         <Button
-                            variant="secondary"
+                            variant="destructive"
                             size="md"
-                            onClick={fetchServices}
-                            isLoading={isFetching}
+                            onClick={() => {
+                                if (services.length === 0) {
+                                    showNotification('There are no services to delete.', 'warning', 'No Services Found');
+                                    return;
+                                }
+                                setIsDeleteConfirmOpen(true);
+                            }}
                             className="flex-1 sm:flex-initial"
                         >
-                            <Zap className="w-4 h-4 mr-2" />
-                            Smart Fetch
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete All
                         </Button>
-                        <div className="w-px bg-slate-800 mx-1 my-1" />
-                        {onClearAll && (
-                            <Button
-                                variant="destructive"
-                                size="md"
-                                onClick={() => {
-                                    if (services.length === 0) {
-                                        showNotification('There are no services to delete.', 'warning', 'No Services Found');
-                                        return;
-                                    }
-                                    setIsDeleteConfirmOpen(true);
-                                }}
-                                className="flex-1 sm:flex-initial"
-                            >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Delete All
-                            </Button>
-                        )}
-                    </div>
-                    <Button
-                        onClick={() => setIsAddModalOpen(true)}
-                        variant="primary"
-                        className="w-full sm:w-auto h-11 px-6 text-[11px] font-black uppercase tracking-widest"
-                    >
-                        <Plus size={16} className="mr-2" />
-                        Add New Service
-                    </Button>
+                    )}
                 </div>
+                <Button
+                    onClick={() => setIsAddModalOpen(true)}
+                    variant="primary"
+                    className="w-full sm:w-auto h-11 px-6 text-[11px] font-black uppercase tracking-widest"
+                >
+                    <Plus size={16} className="mr-2" />
+                    Add New Service
+                </Button>
             </div>
 
             <Card>
