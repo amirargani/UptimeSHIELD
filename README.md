@@ -79,6 +79,14 @@ UptimeSHIELD is a professional-grade monitoring dashboard designed to track, man
     ```
     *This will automatically generate certificates, start the backend (Port 3001), and the web console (Port 3000).*
 
+3.  **Production Deployment**:
+    To run the optimized production build (eliminates "development build" warnings):
+    ```bash
+    npm run build
+    npm start
+    ```
+    *Builds the React app to `/dist` and starts the Express server serving static files at `http://localhost:3001`.*
+
 ---
 
 ## 🛠️ Configuration & Security
@@ -150,6 +158,7 @@ It covers:
 - **Compatibility**: Enhanced backend service discovery and refined the `install:all` script for robust Windows compatibility.
 - **Maintenance**: Added `uninstall:all` script to recursively clean up all `node_modules`, lockfiles, and certificates for a complete project reset.
 - **Verification**: Verified the entire codebase with a zero-error production build pass.
+- **Production Ready**: Added `npm start` script and server configuration to serve the optimized production build, eliminating development warnings.
 
 ### ✨ UI Polish & Semantic Refactoring
 - **Focus-Free Design**: Removed distracting focus rings from all interactive elements (buttons, inputs) for a cleaner, minimal aesthetic.
@@ -169,6 +178,21 @@ It covers:
 - **Mobile First**: Fully responsive layout with a dedicated mobile drawer navigation and touch-optimized controls.
 - **Living Brand**: Enhanced logo styling with pulse animations and dynamic glow effects.
 - **Overview Visualization**: Replaced bar charts with elegant mini sparkline charts showing uptime trends for top 5 running services with status-based color coding and glow effects.
+- **Path Information Modal**: System path filters (included/excluded) now displayed in a clean modal dialog instead of inline badges for better mobile UX.
+
+### 📱 Mobile Responsive Enhancements (Services Component)
+- **Action Buttons**: Optimized button layout with responsive spacing (`gap-2` on mobile, `gap-1` on desktop) for better touch targets.
+- **Icon-Only Mode**: Smart Fetch and Delete All buttons display as icon-only on mobile devices, showing full text labels on larger screens.
+- **Table Optimization**: 
+  - Reduced button sizes on mobile (`w-8 h-8`) expanding to full size (`w-10 h-10`) on desktop.
+  - Smaller icons on mobile (12px-14px) scaling up on larger screens.
+  - Responsive text sizing for service names and descriptions.
+- **Alert Component**: Restructured system services alert with:
+  - Clickable animated AlertTriangle icon that opens path information modal.
+  - Optimized layout: text and switch on one line, maintaining clean mobile presentation.
+  - Responsive text sizing (`text-[9px]` for optimal mobile readability).
+- **Button Alignment**: Action buttons right-aligned on desktop (`sm:justify-end`) for professional appearance.
+- **Compact Badges**: Reduced path badge text size (`text-[6px]`) for minimal visual footprint.
 
 ### 🐛 Bug Fixes
 - **PowerShell Script**: Fixed a syntax error in `ensure-certs.ps1` (removed invalid parentheses from function call) to ensure reliable random password generation for certificates.

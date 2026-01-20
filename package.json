@@ -10,7 +10,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "install:all": "npm install && npm install --prefix server",
-    "uninstall:all": "powershell -Command \"Remove-Item -Recurse -Force node_modules, package-lock.json, server/node_modules, server/package-lock.json, server/certs -ErrorAction SilentlyContinue\""
+    "uninstall:all": "powershell -Command \"Remove-Item -Recurse -Force node_modules, package-lock.json, server/node_modules, server/package-lock.json, server/certs -ErrorAction SilentlyContinue\"",
+    "start": "node server/server.js"
   },
   "dependencies": {
     "@google/genai": "^1.33.0",

@@ -25,6 +25,25 @@ To start the entire system (Frontend + Backend) with zero-configuration:
         - **Frontend**: `https://localhost:3000`
         - **Backend**: `https://localhost:3001`
 
+
+3.  **Production Deployment**:
+    ```bash
+    npm run build
+    npm start
+    ```
+    - **Architecture**:
+        - `vite build` compiles the React app into the static `/dist` folder.
+        - `node server/server.js` starts the Express server.
+        - **Static Serving**: The Express server is configured to serve the contents of `/dist` as static assets.
+        - **Client-Side Routing**: A catch-all route (`*`) in Express ensures that all non-API requests are directed to `index.html`, enabling proper React Router behavior.
+    - **Benefits**:
+        - Eliminates the "Using Development Build" warning from React.
+        - Optimized asset minification and bundling for performance.
+        - Single-process execution (only Node.js needed, no separate Vite server).
+    - **Endpoints**:
+        - **Frontend**: `https://localhost:3000`
+        - **Backend**: `https://localhost:3001`
+
 ---
 
 ## ⌨️ Manual Setup & Configuration
@@ -131,6 +150,11 @@ These are stateless, reusable components that form the building blocks of the ap
 | **Badge** | Status indicators | Animated pulses for active states, semantic coloring (Safety/Danger). |
 | **Input** | Data entry | Floating labels, error state handling, focus management. |
 | **Modal** | Overlays | Full-screen blurred backdrop, scroll locking, z-index management. |
+| **Table** | Structured data | Responsive container, hoverable rows, modular layout components. |
+| **Alert** | Status feedback | Multi-variant (Success/Danger/Info/Warning), SVG icon support. |
+| **Switch** | Binary toggle | Smooth transitions, multi-variant colors, focus management. |
+| **Toast** | Notifications | Fixed positioning, high z-index (100), automated entry animations. |
+| **NavButton** | Navigation triggers | Active state indicators, icon support, glassmorphism hover effects. |
 
 ### 🏗️ Composition Strategy
 - **Molecules**: Atoms are combined to form functional units (e.g., a `SearchInput` combines `Input` + `Icon`).
