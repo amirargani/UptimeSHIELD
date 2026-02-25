@@ -174,11 +174,6 @@ It covers:
 - **`Switch` Multi-Variant Support**: Extended `Switch` component with `success`, `danger`, and `warning` color variants in addition to the existing `primary`, enabling contextual visual feedback.
 - **`Configuration` Toast System**: Replaced generic save states with a full `Toast` notification system — success/error messages appear for 5 seconds with title + message.
 
-### ✨ Services View Improvements
-- **Import/Export Config**: Added JSON export (`services.config.json`) and file-based JSON import directly from the Services toolbar.
-- **Duplicate Detection on Fetch**: Smart Fetch now skips services already present in the dashboard and reports how many duplicates were skipped in the toast notification.
-- **Empty-State Guard on Delete All**: The "Delete All" button now checks for an empty service list before opening the confirmation modal, showing a warning toast instead.
-
 ### v0.0.2-beta
 
 ### 🎨 Atomic UI & Design
@@ -205,6 +200,7 @@ It covers:
     - `Settings.tsx` -> `Configuration.tsx`
 
 ### 🚀 Advanced Features (New)
+- **Import/Export Config**: Added JSON export (`services.config.json`) and file-based JSON import directly from the Services toolbar, enabling portable service configurations.
 - **Hidden Services Manager**: Toggle switch to reveal/hide system services (C:\Windows, etc.) with real-time UI feedback and `localStorage` persistence.
 - **Bulk Operations**: Added 'Delete All' capability with custom confirmation modal and empty-state safety checks.
 - **Glassy Aesthetic**: Premium UI refinement with glassy backgrounds, transparent borders, and blue-glow focus states for all Inputs and Buttons.
