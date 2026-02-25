@@ -250,4 +250,5 @@ It covers:
 - **Naming Compliance**: Fixed `package.json` naming validation to comply with npm lowercase requirements.
 
 ---
+
 ### Developed by © Amir Argani
