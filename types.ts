@@ -35,6 +35,10 @@ export interface AppSettings {
   checkInterval: number; // seconds
   autoRestart: boolean;
   maxRetries: number;
+  certValidityDays: number;
+  autoRenewCert: boolean;
+  certPassword?: string;
+  services: Service[];
 }
 
 export type View = 'overview' | 'services' | 'logs' | 'configuration' | 'ai-analysis';

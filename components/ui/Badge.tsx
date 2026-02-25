@@ -28,7 +28,11 @@ export const Badge: React.FC<BadgeProps> = ({
     return (
         <span className={`${baseStyles} ${variants[variant]} ${animationClass} ${className}`}>
             {animate && (
-                <span className={`w-1.5 h-1.5 rounded-full ${variant === 'success' ? 'bg-green-500' : 'bg-red-500'}`} />
+                <span className={`w-1.5 h-1.5 rounded-full ${variant === 'success' ? 'bg-green-500' :
+                        variant === 'warning' ? 'bg-amber-500' :
+                            variant === 'info' ? 'bg-blue-500' :
+                                'bg-red-500'
+                    }`} />
             )}
             {children}
         </span>

@@ -4,7 +4,7 @@ interface SwitchProps {
     checked: boolean;
     onChange: (checked: boolean) => void;
     className?: string;
-    variant?: 'primary' | 'success' | 'danger';
+    variant?: 'primary' | 'success' | 'danger' | 'warning';
 }
 
 export const Switch: React.FC<SwitchProps> = ({
@@ -14,7 +14,10 @@ export const Switch: React.FC<SwitchProps> = ({
     variant = 'primary'
 }) => {
     const bgColor = checked
-        ? (variant === 'primary' ? 'bg-blue-600' : variant === 'success' ? 'bg-green-600' : 'bg-red-600')
+        ? (variant === 'primary' ? 'bg-blue-600' :
+            variant === 'success' ? 'bg-green-600' :
+                variant === 'warning' ? 'bg-amber-500' :
+                    'bg-red-600')
         : 'bg-slate-800';
 
     return (

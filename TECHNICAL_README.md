@@ -48,15 +48,11 @@ To start the entire system (Frontend + Backend) with zero-configuration:
 
 ## ⌨️ Manual Setup & Configuration
 
-### Custom Certificate Generation
-If you prefer to generate certificates manually or use your own, place them in `server/certs/`:
-
-- **OpenSSL (Generic PEM)**:
-  ```bash
-  openssl req -x509 -newkey rsa:4096 -keyout server/certs/key.pem -out server/certs/cert.pem -nodes -days 365 -subj "/CN=localhost"
-  ```
-- **PowerShell (PFX Container)**:
-  The system uses `cert.pfx` with the generated password found in `server/certs/PASSWORD.md`.
+### 🔑 Manual Certificate Setup
+If you prefer to use your own certificate:
+1. Place your **`cert.pfx`** file in the `server/certs/` directory.
+2. Ensure the **`certPassword`** in your global `config.json` matches the password of your PFX file.
+3. The system will automatically detect and use this file on the next start.
 
 ---
 
@@ -66,13 +62,15 @@ The system supports a dynamic security layer that can be toggled using environme
 
 -   **Environment Variable**: `USE_HTTPS` (defaults to `false`). Set to `false` for standard HTTP (no encryption).
 -   **Automation Script**: [`ensure-certs.ps1`]
-    -   **Execution Strategy**: Prioritizes OpenSSL (via Git Bash/System Path) for standard PEM generation. Falls back to native `New-SelfSignedCertificate` on Windows systems without OpenSSL.
-    -   **PFX Conversion**: Automatically packages PEM files into a `.pfx` container for native Node.js/Windows compatibility.
-    -   **Cert Password**: Generates a random, strong password on first run (stored in `server/certs/PASSWORD.md`) for enhanced security, instead of using a hardcoded default.
+    -   **Execution Strategy**: Prioritizes OpenSSL (via Git Bash/System Path). Falls back to native `New-SelfSignedCertificate` on Windows systems.
+    -   **PFX Conversion**: Automatically packages PEM files into a `.pfx` container.
+    -   **Enterprise Password Management**: Generates 16-character strong passwords. Passwords are ahora stored in the global `config.json` for system-wide persistence.
+    -   **Auto-Cleanup**: Automatically removes legacy `UptimeSHIELD` certificates from the Windows Trusted Root and Personal stores during regeneration.
+    -   **Silent Integration**: Detects Administrator elevation to silently install certificates into the `LocalMachine` store, eliminating recurring security prompts.
 -   **Server Logic**:
-    -   **Backend**: `server.js` checks filesystem for `cert.pfx` or `cert.pem`/`key.pem` pairs. It initializes `https` only if `USE_HTTPS` is `true` AND files are present.
-    -   **Frontend**: Vite config injects SSL configuration into the dev server dynamically.
-    -   **Proxy**: Automatically detects protocol (http/https) to update the `target` URL for API requests.
+    -   **Backend**: `server.js` initializes `https` using the `certPassword` from `config.json`.
+    -   **Encoded Execution**: Uses Base64-encoded PowerShell commands (`-EncodedCommand`) to safely handle complex passwords with special characters.
+    -   **Maintenance Service**: A background interval (every 24h) triggers the security engine to check for upcoming expirations and auto-renew if the toggle is active.
 
 ---
 
@@ -182,14 +180,18 @@ These are stateless, reusable components that form the building blocks of the ap
 ### 📡 **Backend: The PowerShell Bridge**
 #### `server.js`
 The backend acts as a specialized gateway. It uses Node's `child_process` to pipe requests directly into the Windows Management Instrumentation (WMI) via PowerShell.
-- **Dynamic Enumeration**: On-demand scanning of all installed Win32 services.
-- **Buffering**: Optimized `maxBuffer` handling to process large output from hundreds of system services.
+- **Dynamic Enumeration**: On-demand scanning of all installed Win32 services via WMI.
+- **Buffering**: Optimized `maxBuffer` (100MB) handling to process large output from massive system service pools.
+- **Security Context**: Executes PowerShell commands using `utf16le` encoding to ensure cross-platform compatibility with special characters.
+- **Background Workers**: Manages recurring tasks like certificate health checks and auto-renewals independently of the request/response cycle.
 
 ### 🧠 **Frontend: The Orchestration Layer**
 #### `App.tsx`
 This is the "Brain" of the application.
 - **Heartbeat Loop**: Runs a continuous monitoring check (adjustable interval) to verify service health.
 - **Recovery Logic**: Automatically transitions services from `FAILED` to `RESTARTING` based on configured thresholds.
+- **Mobile Responsive Drawer**: Implements a dedicated sidebar that collapses into a smart navigation drawer on mobile dispositivos.
+- **State Persistence**: Persists user preferences like `activeView` and monitoring settings to `localStorage` for continuity across sessions.
 
 #### `Services.tsx`
 A robust interface for service lifecycle management.
@@ -202,13 +204,16 @@ A robust interface for service lifecycle management.
 
 #### `Overview.tsx` & `Logs.tsx`
 The visualization suite.
-- **Metrics**: Real-time aggregation of uptime percentages and failure counts.
-- **Event Stream**: A high-performance log terminal with built-in hooks for AI analysis.
+- **Mini Sparklines**: `Overview` uses high-performance `LineChart` (Recharts) to show real-time uptime trends for the top 5 services with status-aware glow effects.
+- **Metrics Aggregation**: Real-time aggregation of uptime percentages and failure counts using `useMemo` for performance.
+- **Event Stream**: A scroll-synced log terminal with built-in hooks for AI analysis and semantic log-level filtering.
 
 #### `Configuration.tsx`
 The central control panel for system behavior.
 - **Notification Engine**: Manages SMTP relay settings for critical alerts.
 - **Threshold Tuning**: Configures the `checkInterval` and `autoRestart` resilience policies.
+- **Sectional Synchronization**: Implements separate sync logic for "Email" and "Monitoring Engine" settings, fetching the latest server state before merging to prevent race conditions or accidental overwrites of unrelated fields.
+- **Live Security Dashboard**: Displays real-time metadata from the active certificate, including thumbprint, issuer, and days until expiration.
 
 ---
 

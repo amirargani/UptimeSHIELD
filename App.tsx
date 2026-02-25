@@ -30,14 +30,92 @@ const App: React.FC = () => {
     localStorage.setItem('UptimeSHIELD_activeView', activeView);
   }, [activeView]);
 
-  const [services, setServices] = useState<Service[]>(() => {
-    const saved = localStorage.getItem('UptimeSHIELD_services');
-    return saved ? JSON.parse(saved) : [];
+  const [settings, setSettings] = useState<AppSettings>(() => {
+    const saved = localStorage.getItem('UptimeSHIELD_settings');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (!parsed.services) parsed.services = [];
+        return parsed;
+      } catch (e) {
+        console.error("Failed to parse settings from localStorage", e);
+      }
+    }
+    return {
+      emailNotifications: true,
+      recipientEmail: 'admin@UptimeSHIELD.local',
+      smtpServer: 'smtp.local',
+      smtpPort: 587,
+      smtpUser: '',
+      smtpPassword: '',
+      checkInterval: 3,
+      autoRestart: true,
+      maxRetries: 3,
+      certValidityDays: 365,
+      autoRenewCert: true,
+      services: []
+    };
   });
 
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Load from server on mount
   useEffect(() => {
-    localStorage.setItem('UptimeSHIELD_services', JSON.stringify(services));
-  }, [services]);
+    const fetchConfig = async () => {
+      try {
+        const response = await fetch('/api/config');
+        if (response.ok) {
+          const data = await response.json();
+          if (data && typeof data === 'object') {
+            setSettings(prev => ({ ...prev, ...data }));
+            setIsLoaded(true);
+            console.log("[App] Config loaded from server and merged with local defaults.");
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch config from server", error);
+        // Even if fetch fails, we allow local changes to sync eventually
+        // but maybe we should wait for a manual retry? 
+        // For now, let's treat it as loaded if we want to allow offline use.
+        setIsLoaded(true);
+      }
+    };
+    fetchConfig();
+  }, []);
+
+  // Sync to localStorage AND server
+  useEffect(() => {
+    localStorage.setItem('UptimeSHIELD_settings', JSON.stringify(settings));
+
+    const syncConfig = async () => {
+      if (!isLoaded) {
+        console.log("[App] Skipping server sync: not loaded yet.");
+        return;
+      }
+
+      try {
+        await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(settings),
+        });
+      } catch (error) {
+        console.error("Failed to sync config to server", error);
+      }
+    };
+
+    const debounce = setTimeout(syncConfig, 1000);
+    return () => clearTimeout(debounce);
+  }, [settings, isLoaded]);
+
+  // Derived/helper states
+  const services = settings.services || [];
+  const setServices = (update: Service[] | ((prev: Service[]) => Service[])) => {
+    setSettings(prev => ({
+      ...prev,
+      services: typeof update === 'function' ? update(prev.services || []) : update
+    }));
+  };
 
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isMonitoring, setIsMonitoring] = useState(false);
@@ -45,18 +123,6 @@ const App: React.FC = () => {
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [aiAnalysisContent, setAiAnalysisContent] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-
-  const [settings, setSettings] = useState<AppSettings>({
-    emailNotifications: true,
-    recipientEmail: 'admin@UptimeSHIELD.local',
-    smtpServer: 'smtp.local',
-    smtpPort: 587,
-    smtpUser: '',
-    smtpPassword: '',
-    checkInterval: 3,
-    autoRestart: true,
-    maxRetries: 3
-  });
 
   const addLog = useCallback((level: LogEntry['level'], message: string, serviceId?: string, serviceName?: string) => {
     const newLog: LogEntry = {
@@ -202,7 +268,7 @@ const App: React.FC = () => {
           {/* Desktop Logo (unchanged) */}
           <div className="relative group cursor-pointer hidden md:block">
             <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl blur opacity-20 group-hover:opacity-75 transition duration-500 group-hover:duration-200 animate-pulse" />
-            <div className="relative bg-[#000410] p-4 rounded-xl border border-slate-800 group-hover:border-blue-500/50 transition-colors duration-300">
+            <div className="relative bg-[#000410] p-4 rounded-xl border border-slate-800 transition-colors duration-300">
               <img src={logo} alt="UptimeSHIELD Logo" className="w-9 h-9 transition-transform duration-500 ease-in-out" />
             </div>
           </div>
@@ -213,7 +279,7 @@ const App: React.FC = () => {
         <nav className="flex-1 p-6 space-y-3">
           <NavButton active={activeView === 'overview'} onClick={() => { setActiveView('overview'); setIsMobileMenuOpen(false); }} icon={<Layout size={18} />} label="Overview" />
           <NavButton active={activeView === 'services'} onClick={() => { setActiveView('services'); setIsMobileMenuOpen(false); }} icon={<Activity size={18} />} label="Services" />
-          <NavButton active={activeView === 'logs'} onClick={() => { setActiveView('logs'); setIsMobileMenuOpen(false); }} icon={<Terminal size={18} />} label="Security Logs" />
+          <NavButton active={activeView === 'logs'} onClick={() => { setActiveView('logs'); setIsMobileMenuOpen(false); }} icon={<Terminal size={18} />} label="Services Logs" />
           <NavButton active={activeView === 'configuration'} onClick={() => { setActiveView('configuration'); setIsMobileMenuOpen(false); }} icon={<SettingsIcon size={18} />} label="Configuration" />
         </nav>
 
@@ -242,26 +308,46 @@ const App: React.FC = () => {
       </aside>
 
       <main className="flex-1 overflow-auto bg-[#000410] flex flex-col w-full relative">
-        <header className="h-auto py-4 md:h-20 md:py-0 border-b border-slate-800 flex flex-col md:flex-row gap-4 md:gap-0 items-start md:items-center justify-between px-6 md:px-10 bg-[#000410]/80 backdrop-blur-xl sticky top-0 z-10">
-          <div className="flex flex-col">
+        <header className="h-auto py-[1em] border-b border-slate-800 flex items-center justify-between px-10 bg-[#000410]/80 backdrop-blur-xl sticky top-0 z-10 w-full transition-all duration-300">
+          <div className="flex flex-col min-w-[200px]">
             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 mb-0.5">Navigation Context</span>
             <h2 className="text-lg font-black text-slate-100 uppercase tracking-tighter">
-              {activeView === 'overview' && 'Operations Dashboard'}
-              {activeView === 'services' && 'Cluster Management'}
-              {activeView === 'logs' && 'Global Event Audit'}
-              {activeView === 'configuration' && 'System Parameters'}
+              {activeView === 'overview' && 'Overview'}
+              {activeView === 'services' && 'Services'}
+              {activeView === 'logs' && 'Services Logs'}
+              {activeView === 'configuration' && 'Configuration'}
             </h2>
+            {activeView === 'overview' && (
+              <p className="text-slate-500 text-[10px] font-medium italic mt-0.5 tracking-wider">
+                Real-time health status and core system metrics.
+              </p>
+            )}
+            {activeView === 'services' && (
+              <p className="text-slate-500 text-[10px] font-medium italic mt-0.5 tracking-wider">
+                Manage and monitor the status of your service cluster.
+              </p>
+            )}
+            {activeView === 'logs' && (
+              <p className="text-slate-500 text-[10px] font-medium italic mt-0.5 tracking-wider">
+                Unified audit trail and real-time operational event stream.
+              </p>
+            )}
+            {activeView === 'configuration' && (
+              <p className="text-slate-500 text-[10px] font-medium italic mt-0.5 tracking-wider">
+                System-wide settings, security certificates, and alert relays.
+              </p>
+            )}
           </div>
 
-          <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
+          <div className="flex items-center gap-6 justify-end">
 
             <div className="flex items-center gap-4 p-1.5 bg-slate-900/50 rounded-full pr-4">
               <Badge
                 variant={isMonitoring ? "success" : "danger"}
                 animate={isMonitoring}
                 className={isMonitoring
-                  ? '!bg-[rgba(34,197,94,0.1)] !border-[rgba(34,197,94,0)]'
-                  : '!bg-[rgba(239,68,68,0.1)] !border-[rgba(239,68,68,0)]'
+                  ? '!bg-[rgba(34,197,94,0.1)] !border-[rgba(34,197,94,0)] !w-32 justify-center'
+                  : '!bg-[rgba(239,68,68,0.1)] !border-[rgba(239,68,68,0)] !w-32 justify-center'
                 }
               >
                 {isMonitoring ? 'SYSTEM LIVE' : 'SYSTEM OFFLINE'}
@@ -270,7 +356,7 @@ const App: React.FC = () => {
               <div className="h-4 w-px bg-slate-800" />
 
               <span className="text-[10px] font-mono font-bold text-slate-500 tracking-wider">
-                v0.0.2-beta
+                v0.0.3-beta
               </span>
 
               <div className="h-4 w-px bg-slate-800" />

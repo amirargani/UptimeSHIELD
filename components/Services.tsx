@@ -152,12 +152,9 @@ export const Services: React.FC<ServicesProps> = ({ services, onToggleStatus, on
     };
 
     return (
-        <div className="space-y-6 animate-fade-in text-slate-100">
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
+        <div className="h-full flex flex-col space-y-6 animate-fade-in text-slate-100">
+            <div className="flex flex-col lg:flex-row justify-between border-b border-slate-800 pb-6 items-end gap-6">
                 <div className="w-full lg:w-auto">
-                    <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter">Service Management</h2>
-                    <p className="text-slate-500 text-sm font-medium italic">Configure and control monitored applications.</p>
-
                     {notification && (
                         <Toast
                             message={notification.message}
@@ -559,25 +556,25 @@ const StatusBadge: React.FC<{ status: ServiceStatus }> = ({ status }) => {
     switch (status) {
         case ServiceStatus.RUNNING:
             return (
-                <Badge variant="success" animate className="!bg-[rgba(34,197,94,0.1)] !border-[rgba(34,197,94,0)]">
+                <Badge variant="success" animate className="!bg-[rgba(34,197,94,0.1)] !border-[rgba(34,197,94,0)] min-w-[100px] justify-center">
                     Running
                 </Badge>
             );
         case ServiceStatus.RESTARTING:
             return (
-                <Badge variant="warning" animate className="!bg-[rgba(249,115,22,0.1)] !border-[rgba(249,115,22,0)] text-orange-400">
+                <Badge variant="warning" animate className="!bg-[rgba(249,115,22,0.1)] !border-[rgba(249,115,22,0)] text-orange-400 min-w-[100px] justify-center">
                     Restarting
                 </Badge>
             );
         case ServiceStatus.FAILED:
             return (
-                <Badge variant="danger" animate className="!bg-[rgba(239,68,68,0.1)] !border-[rgba(239,68,68,0)]">
+                <Badge variant="danger" animate className="!bg-[rgba(239,68,68,0.1)] !border-[rgba(239,68,68,0)] min-w-[100px] justify-center">
                     Failed
                 </Badge>
             );
         default:
             return (
-                <Badge variant="danger" animate className="!bg-[rgba(239,68,68,0.1)] !border-[rgba(239,68,68,0)]">
+                <Badge variant="danger" animate className="!bg-[rgba(239,68,68,0.1)] !border-[rgba(239,68,68,0)] min-w-[100px] justify-center">
                     Stopped
                 </Badge>
             );

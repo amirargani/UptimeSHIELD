@@ -1,7 +1,7 @@
 # 🛡️ UptimeSHIELD
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-D22128?style=for-the-badge&logo=apache)](LICENSE.txt)
-[![Version](https://img.shields.io/badge/Version-0.0.2--beta-orange?style=for-the-badge)](https://github.com/amirargani/UptimeSHIELD/releases)
+[![Version](https://img.shields.io/badge/Version-0.0.3--beta-orange?style=for-the-badge)](https://github.com/amirargani/UptimeSHIELD/releases)
 [![Platform](https://img.shields.io/badge/Platform-Windows-0078D4?style=for-the-badge&logo=windows)](https://www.microsoft.com/windows)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
@@ -95,7 +95,7 @@ UptimeSHIELD is a professional-grade monitoring dashboard designed to track, man
 UptimeSHIELD includes an automated security engine: [`ensure-certs.ps1`].
 
 - **Automated**: Runs on every `npm run dev`. Checks for `cert.pfx` and generates it if missing.
-- **Manual**: For custom certificates, place `cert.pem` and `key.pem` in `server/certs/`.
+- **Manual**: For custom certificates, place your `cert.pfx` in `server/certs/` and ensure the password matches the `certPassword` in your `config.json`.
 - **Warning**: As we use self-signed certificates, you must accept the browser warning on first load.
 
 > [!TIP]
@@ -143,6 +143,41 @@ It covers:
 ---
 
 ## 📜 Changelog
+
+### v0.0.3-beta
+
+### 🔗 Persistent Server-Side Configuration
+- **Config API**: Introduced `/api/config` (GET & POST) endpoints in `server.js` to persist application settings to a `config.json` file on the server.
+- **Auto-Sync**: `App.tsx` now loads the configuration from the server on startup and debounce-syncs all setting changes (with a 1-second delay) back to the server, ensuring persistence across restarts.
+- **Race Condition Protection**: Settings load is gated by an `isLoaded` flag — local changes are not synced to the server until the initial server config has been fully fetched and merged.
+- **Sectional Save in Configuration**: `Configuration.tsx` now performs isolated saves per section (Email / Engine). Before saving, it fetches the latest server config and merges only the relevant fields to prevent unintentional overwrites of unrelated settings.
+
+### 🔐 Certificate Management Overhaul
+- **Live Certificate Dashboard**: The `Configuration` view now displays real-time certificate metadata fetched via `/api/certs/status`, including expiration date, days remaining, issuer, thumbprint, and validity status.
+- **Manual Certificate Rotation**: Added a "Regenerate Manual Certificate" button that triggers a `POST /api/certs/generate` call with `force: true`, enabling on-demand renewal from the UI.
+- **Password Strength Meter**: Certificate password field now includes a 4-stage visual strength indicator (Weak / Fair / Strong / Enterprise) with color-coded progress bars.
+- **Auto-Generate Password**: The certificate rotation flow auto-generates a cryptographically strong 16-character password (uppercase + digits + symbols) if no password is provided by the user.
+- **Show/Hide Password Toggle**: Added a visibility toggle button for the certificate password input field.
+- **Certificate Validity Range Slider**: Validity period selection (1 Day to 10 Years) now uses a stepped range slider instead of a plain input, with human-readable labels (e.g., `1D`, `3M`, `1Y`).
+- **Encoded PowerShell Execution**: `server.js` uses Base64-encoded PowerShell commands (`-EncodedCommand`) for the `/api/certs/status` endpoint to safely handle special characters in cert passwords.
+- **Robust JSON Parsing**: The cert status endpoint now extracts the JSON payload by searching for first/last `{`/`}` braces, preventing parse failures from extra output such as BOM markers or console noise.
+
+### ⚙️ Backend Enhancements (`server.js`)
+- **BOM Stripping**: `config.json` reads now strip UTF-8 BOM (`\uFEFF`) automatically to prevent JSON parse errors from tools that add it.
+- **CORS Headers**: Added global `Access-Control-Allow-Origin` and `Access-Control-Allow-Headers` middleware for flexible development setups.
+- **Network IP Display**: Server startup now prints all local network IP addresses alongside the localhost URL for easy LAN access.
+- **Background Certificate Health Check**: A background `setInterval` (every 24 hours) automatically triggers `ensure-certs.ps1` to check for upcoming certificate expirations and auto-renew when the toggle is active.
+- **Cert Directory Safety**: Config POST handler ensures the config directory exists before writing (`mkdirSync` with `recursive: true`).
+
+### 🎨 UI Component Enhancements
+- **`Badge` New `warning` Variant**: Added a new `warning` variant (amber colors) to the `Badge` atom for use across Certificate and Engine settings.
+- **`Switch` Multi-Variant Support**: Extended `Switch` component with `success`, `danger`, and `warning` color variants in addition to the existing `primary`, enabling contextual visual feedback.
+- **`Configuration` Toast System**: Replaced generic save states with a full `Toast` notification system — success/error messages appear for 5 seconds with title + message.
+
+### ✨ Services View Improvements
+- **Import/Export Config**: Added JSON export (`services.config.json`) and file-based JSON import directly from the Services toolbar.
+- **Duplicate Detection on Fetch**: Smart Fetch now skips services already present in the dashboard and reports how many duplicates were skipped in the toast notification.
+- **Empty-State Guard on Delete All**: The "Delete All" button now checks for an empty service list before opening the confirmation modal, showing a warning toast instead.
 
 ### v0.0.2-beta
 
@@ -196,6 +231,7 @@ It covers:
 
 ### 🐛 Bug Fixes
 - **PowerShell Script**: Fixed a syntax error in `ensure-certs.ps1` (removed invalid parentheses from function call) to ensure reliable random password generation for certificates.
+
 ### v0.0.1-beta
 
 ### ✨ Features
@@ -218,5 +254,4 @@ It covers:
 - **Naming Compliance**: Fixed `package.json` naming validation to comply with npm lowercase requirements.
 
 ---
-
-### Developed by © 2025 Amir Argani
+### Developed by © Amir Argani

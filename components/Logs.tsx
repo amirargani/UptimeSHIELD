@@ -47,12 +47,8 @@ export const Logs: React.FC<LogsProps> = ({ logs, onAnalyze }) => {
     };
 
     return (
-        <div className="h-full flex flex-col space-y-4 animate-fade-in">
+        <div className="h-full flex flex-col space-y-6 animate-fade-in text-slate-100">
             <div className="flex justify-between items-end border-b border-slate-800 pb-6">
-                <div>
-                    <h2 className="text-3xl font-black text-slate-100 uppercase tracking-tighter">System Logs</h2>
-                    <p className="text-slate-500 text-sm font-medium italic">Real-time event stream from the monitoring engine.</p>
-                </div>
                 <div className="bg-slate-950 rounded-lg flex items-center px-4 py-2 gap-3 text-slate-500">
                     <Search size={16} />
                     <span className="text-xs font-bold uppercase tracking-widest">Filter logs...</span>
@@ -62,7 +58,7 @@ export const Logs: React.FC<LogsProps> = ({ logs, onAnalyze }) => {
             <Card className="flex-1 overflow-hidden flex flex-col shadow-inner font-mono text-sm relative">
                 <div className="bg-slate-950 p-2.5 border-b border-slate-800/50 flex gap-2 items-center px-4">
                     <Terminal size={14} className="text-slate-600" />
-                    <span className="text-slate-600 text-[10px] font-bold uppercase tracking-widest">UptimeSHIELD / event_stream.log</span>
+                    <span className="text-slate-600 text-[10px] font-bold uppercase tracking-widest">UptimeSHIELD / logs / services.log</span>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-2 bg-[#000410]/40">
@@ -77,7 +73,11 @@ export const Logs: React.FC<LogsProps> = ({ logs, onAnalyze }) => {
                                 {log.timestamp.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                             </span>
 
-                            <Badge variant={getBadgeVariant(log.level)} className={`shrink-0 min-w-[70px] justify-center ${getBadgeStyles(log.level)}`}>
+                            <Badge
+                                variant={getBadgeVariant(log.level)}
+                                animate={log.level !== 'INFO'}
+                                className={`shrink-0 min-w-[100px] justify-center ${getBadgeStyles(log.level)}`}
+                            >
                                 {log.level}
                             </Badge>
 

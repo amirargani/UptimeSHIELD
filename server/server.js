@@ -9,7 +9,9 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 require('dotenv').config({ path: path.join(__dirname, '..', '.env.local') });
 
 const app = express();
+app.use(express.json());
 const PORT = 3001;
+const CONFIG_PATH = path.join(__dirname, "config.json");
 const USE_HTTPS = process.env.USE_HTTPS !== 'false';
 
 // Allow CORS if needed, or rely on Vite proxy
@@ -51,23 +53,174 @@ app.get("/api/services", (req, res) => {
     });
 });
 
-// Serve static files from the React app
-app.use(express.static(path.join(__dirname, '..', 'dist')));
-
-// The "catchall" handler: for any request that doesn't
-// match one above, send back React's index.html file.
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
+app.get("/api/config", (req, res) => {
+    console.log("[server] GET /api/config reached");
+    if (fs.existsSync(CONFIG_PATH)) {
+        try {
+            const content = fs.readFileSync(CONFIG_PATH, 'utf8').trim();
+            // Remove BOM if present (rare but possible with some tools)
+            const cleanContent = content.startsWith('\uFEFF') ? content.slice(1) : content;
+            const config = JSON.parse(cleanContent);
+            return res.json(config);
+        } catch (err) {
+            console.error(`[server] config.json parse error: ${err.message}`);
+            return res.status(500).send(`Error reading configuration: ${err.message}`);
+        }
+    }
+    res.json({});
 });
+
+app.post("/api/config", (req, res) => {
+    console.log("[server] POST /api/config reached");
+    const config = req.body;
+
+    // Ensure parent directory for config exists
+    const configDir = path.dirname(CONFIG_PATH);
+    if (!fs.existsSync(configDir)) {
+        fs.mkdirSync(configDir, { recursive: true });
+    }
+
+    try {
+        fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+        console.log(`[server] Config updated and saved to ${CONFIG_PATH}`);
+        res.json({ success: true });
+    } catch (err) {
+        console.error("[server] Error writing config:", err);
+        res.status(500).json({ error: "Failed to write config" });
+    }
+});
+
+app.post("/api/certs/generate", (req, res) => {
+    const { force } = req.body;
+    console.log(`[server] Triggering certificate generation (Force: ${force || false})...`);
+    const scriptPath = path.join(__dirname, "scripts", "ensure-certs.ps1");
+    const command = `powershell -ExecutionPolicy Bypass -File "${scriptPath}"${force ? " -Force" : ""}`;
+
+    exec(command, (error, stdout, stderr) => {
+        if (error) {
+            console.error("[server] Cert generation error:", error);
+            return res.status(500).json({ error: error.message, stderr });
+        }
+        console.log("[server] Cert generation output:", stdout);
+        res.json({ success: true, output: stdout });
+    });
+});
+
+app.get("/api/certs/status", (req, res) => {
+    const pfxPath = path.join(__dirname, "certs", "cert.pfx");
+    if (!fs.existsSync(pfxPath)) {
+        return res.json({ hasCert: false });
+    }
+
+    let passphrase = "password";
+    if (fs.existsSync(CONFIG_PATH)) {
+        try {
+            const content = fs.readFileSync(CONFIG_PATH, 'utf8').trim();
+            const cleanContent = content.startsWith('\uFEFF') ? content.slice(1) : content;
+            const config = JSON.parse(cleanContent);
+            if (config.certPassword) passphrase = config.certPassword;
+        } catch (e) {
+            console.error("[server] Failed to parse config.json for status:", e.message);
+        }
+    }
+
+    // Use EncodedCommand to avoid quoting/interpolation issues with special characters in passwords
+    const psScript = `
+        $pfxPath = '${pfxPath.replace(/'/g, "''")}'
+        $password = '${passphrase.replace(/'/g, "''")}'
+        try {
+            $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($pfxPath, $password)
+            $now = Get-Date
+            $remaining = ($cert.NotAfter - $now).TotalDays
+            $data = @{
+                hasCert = $true
+                expiry = $cert.NotAfter.ToString('yyyy-MM-dd HH:mm:ss')
+                issuer = $cert.Issuer
+                subject = $cert.Subject
+                thumbprint = $cert.Thumbprint
+                daysRemaining = [Math]::Round($remaining)
+                isValid = $remaining -gt 0
+            }
+            $data | ConvertTo-Json -Compress
+        } catch {
+            @{ hasCert = $true; error = $_.Exception.Message; isValid = $false } | ConvertTo-Json -Compress
+        }
+    `;
+
+    const encodedScript = Buffer.from(psScript, 'utf16le').toString('base64');
+
+    exec(`powershell -EncodedCommand ${encodedScript}`, (error, stdout, stderr) => {
+        console.log("[server] [DEBUG] Raw PowerShell stdout:", stdout);
+        if (error) {
+            console.error("[server] Cert status execution error:", error);
+            return res.status(500).json({ error: error.message, details: stderr });
+        }
+        try {
+            const trimmedStdout = stdout.trim();
+            if (!trimmedStdout) {
+                return res.status(500).json({ error: "Empty response from cert engine" });
+            }
+
+            // Extract the JSON part if there is any clutter (like BOM or extra newlines)
+            const firstBrace = trimmedStdout.indexOf('{');
+            const lastBrace = trimmedStdout.lastIndexOf('}');
+            if (firstBrace === -1 || lastBrace === -1 || lastBrace < firstBrace) {
+                console.error("[server] No JSON object found in output:", trimmedStdout);
+                return res.status(500).json({ error: "Invalid response format [v3]", raw: trimmedStdout });
+            }
+
+            const jsonPart = trimmedStdout.substring(firstBrace, lastBrace + 1);
+            res.json(JSON.parse(jsonPart));
+        } catch (err) {
+            console.error("[server] [DEBUG] Parse error:", err);
+            res.status(500).json({ error: "Failed to parse cert info [v3]", raw: stdout });
+        }
+    });
+});
+
+const getMetadataPath = () => {
+    // Legacy support or internal use (currently points to same root or data dir)
+    return path.join(__dirname, 'data', 'metadata.json');
+};
+
+// Serve static files from the React app
+const distPath = path.join(__dirname, '..', 'dist');
+if (fs.existsSync(distPath)) {
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+        const indexPath = path.join(distPath, 'index.html');
+        if (fs.existsSync(indexPath)) {
+            res.sendFile(indexPath);
+        } else {
+            res.status(404).send("Frontend build not found. Run 'npm run build' or use 'npm run dev'.");
+        }
+    });
+} else {
+    console.log("[server] 'dist' folder not found. Serving as API-only mode.");
+    app.get('*', (req, res) => {
+        res.status(404).json({ error: "API route not found", path: req.url });
+    });
+}
 
 const protocol = USE_HTTPS ? "https" : "http";
 const pfxPath = path.join(__dirname, "certs", "cert.pfx");
 const hasPfx = fs.existsSync(pfxPath);
 
 if (USE_HTTPS && hasPfx) {
+    let passphrase = "password";
+    if (fs.existsSync(CONFIG_PATH)) {
+        try {
+            const content = fs.readFileSync(CONFIG_PATH, 'utf8').trim();
+            const cleanContent = content.startsWith('\uFEFF') ? content.slice(1) : content;
+            const config = JSON.parse(cleanContent);
+            if (config.certPassword) passphrase = config.certPassword;
+        } catch (e) {
+            console.error("[server] Failed to read config.json for passphrase:", e.message);
+        }
+    }
     const options = {
         pfx: fs.readFileSync(pfxPath),
-        passphrase: "password"
+        passphrase: passphrase
     };
     https.createServer(options, app).listen(PORT, "0.0.0.0", () => {
         printServerStarted("https");
@@ -81,6 +234,25 @@ if (USE_HTTPS && hasPfx) {
     });
 }
 
+// Background Certificate Maintenance (runs every 24 hours)
+const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+setInterval(() => {
+    console.log("[server] [Background] Checking certificate for auto-renewal...");
+    const scriptPath = path.join(__dirname, "scripts", "ensure-certs.ps1");
+    // Standard run (no -Force) lets the script check the daysRemaining and autoRenewCert toggle
+    const command = `powershell -ExecutionPolicy Bypass -File "${scriptPath}"`;
+
+    exec(command, (error, stdout, stderr) => {
+        if (error) {
+            console.error("[server] [Background] Auto-renewal check failed:", error.message);
+            if (stderr) console.error("[server] [Background] Stderr:", stderr);
+        } else {
+            console.log("[server] [Background] Auto-renewal check completed.");
+            if (stdout.trim()) console.log("[server] [Background] Result:", stdout.trim());
+        }
+    });
+}, TWENTY_FOUR_HOURS);
+
 function printServerStarted(protocol) {
     console.log("");
     console.log(`  \x1b[36m➜\x1b[0m  \x1b[1mLocal:\x1b[22m   \x1b[36m${protocol}://localhost:${PORT}/\x1b[0m`);
@@ -89,4 +261,5 @@ function printServerStarted(protocol) {
         console.log(`  \x1b[36m➜\x1b[0m  \x1b[1mNetwork:\x1b[22m \x1b[36m${protocol}://${ip}:${PORT}/\x1b[0m`);
     });
     console.log(`  \x1b[36m➜\x1b[0m  \x1b[1mAPI Services:\x1b[22m \x1b[36m${protocol}://localhost:${PORT}/api/services\x1b[0m`);
+    console.log(`  \x1b[36m➜\x1b[0m  \x1b[1mCert Status:\x1b[22m \x1b[36m${protocol}://localhost:${PORT}/api/certs/status\x1b[0m`);
 }

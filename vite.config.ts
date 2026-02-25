@@ -11,11 +11,22 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       https: (() => {
         if (env.USE_HTTPS !== 'true') return undefined;
+        const configPath = path.resolve(__dirname, 'server/config.json');
+        let certPass = 'password';
+        if (fs.existsSync(configPath)) {
+          try {
+            const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+            if (config.certPassword) certPass = config.certPassword;
+          } catch (e) {
+            console.warn('Vite: Failed to parse config.json for HTTPS passphrase');
+          }
+        }
+
         const pfxPath = path.resolve(__dirname, 'server/certs/cert.pfx');
         if (fs.existsSync(pfxPath)) {
           return {
             pfx: fs.readFileSync(pfxPath),
-            passphrase: 'password',
+            passphrase: certPass,
           };
         }
         return undefined;
