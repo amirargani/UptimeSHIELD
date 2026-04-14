@@ -118,11 +118,26 @@ const App: React.FC = () => {
   };
 
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [isMonitoring, setIsMonitoring] = useState(false);
+  const [isMonitoring, setIsMonitoring] = useState(() => {
+    return localStorage.getItem('UptimeSHIELD_isMonitoring') === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('UptimeSHIELD_isMonitoring', isMonitoring.toString());
+  }, [isMonitoring]);
 
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [aiAnalysisContent, setAiAnalysisContent] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+
+  // Track if we've logged initial statuses for the current monitoring session
+  const hasLoggedInitialStatus = React.useRef(false);
+
+  useEffect(() => {
+    fetch('/api/admin/check').then(r => r.json()).then(d => setIsAdmin(d.isAdmin)).catch(() => { });
+  }, []);
 
   const addLog = useCallback((level: LogEntry['level'], message: string, serviceId?: string, serviceName?: string) => {
     const newLog: LogEntry = {
@@ -133,73 +148,133 @@ const App: React.FC = () => {
       serviceId: serviceId || null,
       serviceName: serviceName || null
     };
-    setLogs(prev => [...prev, newLog]);
+    setLogs(prev => {
+      const appended = [...prev, newLog];
+      return appended.length > 1000 ? appended.slice(-1000) : appended;
+    });
   }, []);
 
   useEffect(() => {
-    if (!isMonitoring) return;
+    if (services.length === 0) return;
 
-    const intervalId = setInterval(() => {
-      setServices(currentServices => {
-        return currentServices.map(service => {
-          if (service.status === ServiceStatus.PAUSED || service.status === ServiceStatus.STOPPED) {
-            return service;
-          }
+    let isFetching = false;
+    const performPoll = async () => {
+      if (isFetching) return;
+      isFetching = true;
 
-          if (service.status === ServiceStatus.RUNNING) {
-            if (Math.random() < 0.05) {
-              const newState = settings.autoRestart ? ServiceStatus.RESTARTING : ServiceStatus.FAILED;
-              addLog('ERROR', `Heartbeat failed for ${service.name}. Connection timed out.`, service.id, service.name);
+      try {
+        const response = await fetch('/api/services/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ names: services.map(s => s.name) })
+        });
 
-              if (newState === ServiceStatus.RESTARTING) {
-                addLog('WARNING', `Initiating auto-restart sequence for ${service.name}...`, service.id, service.name);
+        if (response.ok) {
+          const statuses = await response.json();
+          const statusMap = new Map();
+          statuses.forEach((s: any) => statusMap.set(s.Name.toLowerCase(), s.State));
+
+          setServices(currentServices => {
+            return currentServices.map(service => {
+              const liveState = statusMap.get(service.name.toLowerCase());
+              if (!liveState) return service;
+
+              const mappedStatus = liveState === 'Running' ? ServiceStatus.RUNNING : ServiceStatus.STOPPED;
+              let newStatus = mappedStatus;
+              let newFailCount = service.failCount;
+
+              if (mappedStatus === ServiceStatus.RUNNING && service.status !== ServiceStatus.RUNNING && service.status !== ServiceStatus.STOPPED) {
+                addLog('SUCCESS', `Service ${service.name} is running detected.`, service.id, service.name);
+              }
+              if (mappedStatus === ServiceStatus.STOPPED && service.status === ServiceStatus.RUNNING) {
+                addLog('ERROR', `Service ${service.name} unexpectedly stopped!`, service.id, service.name);
+                newFailCount = service.failCount + 1;
+
+                if (settings.autoRestart && isMonitoring) {
+                  addLog('WARNING', `Initiating auto-restart sequence for ${service.name}...`, service.id, service.name);
+                  newStatus = ServiceStatus.RESTARTING;
+
+                  fetch('/api/services/action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: service.name, action: 'start' })
+                  }).catch(() => { });
+                }
               }
 
               return {
                 ...service,
-                status: newState,
-                failCount: service.failCount + 1
+                status: newStatus,
+                uptime: mappedStatus === ServiceStatus.RUNNING ? Math.min(100, service.uptime + 0.01) : service.uptime,
+                failCount: newFailCount
               };
-            }
-            return { ...service, uptime: Math.min(100, service.uptime + 0.01) };
-          }
+            });
+          });
 
-          if (service.status === ServiceStatus.RESTARTING) {
-            if (Math.random() > 0.3) {
-              addLog('SUCCESS', `Service ${service.name} restarted successfully.`, service.id, service.name);
-              return { ...service, status: ServiceStatus.RUNNING, lastRestart: new Date() };
-            } else {
-              if (service.failCount >= settings.maxRetries) {
-                addLog('ERROR', `CRITICAL: ${service.name} failed to restart after ${service.failCount} attempts.`, service.id, service.name);
-                if (settings.emailNotifications) {
-                  addLog('INFO', `Sending failure notification email to ${settings.recipientEmail}`, service.id, service.name);
-                }
-                return { ...service, status: ServiceStatus.FAILED };
+          if (isMonitoring && !hasLoggedInitialStatus.current) {
+            hasLoggedInitialStatus.current = true;
+            Array.from(statusMap.entries()).forEach(([name, state]) => {
+              const srv = services.find(s => s.name.toLowerCase() === name);
+              if (srv) {
+                addLog(String(state).toUpperCase(), 'Live status formally confirmed on engine boot.', srv.id, srv.name);
               }
-              addLog('WARNING', `Restart attempt failed for ${service.name}. Retrying...`, service.id, service.name);
-              return { ...service, failCount: service.failCount + 1 };
-            }
+            });
+          } else if (isMonitoring) {
+            Array.from(statusMap.entries()).forEach(([name, state]) => {
+              const srv = services.find(s => s.name.toLowerCase() === name);
+              if (srv) {
+                addLog(String(state).toUpperCase(), 'Cyclic interval status verification.', srv.id, srv.name);
+              }
+            });
           }
+        }
+      } catch (error) {
+        console.error("Failed to poll services", error);
+      } finally {
+        isFetching = false;
+      }
+    };
 
-          return service;
-        });
+    // Perform an immediate fetch to sync true system state visually
+    performPoll();
+
+    // Only continue polling periodically if monitoring is active
+    let intervalId: any = null;
+    if (isMonitoring) {
+      intervalId = setInterval(performPoll, settings.checkInterval * 1000);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isMonitoring, settings.checkInterval, addLog, settings.autoRestart, services.length]);
+
+  const toggleServiceStatus = async (id: string) => {
+    const s = services.find(srv => srv.id === id);
+    if (!s) return;
+
+    const isStopped = s.status === ServiceStatus.STOPPED || s.status === ServiceStatus.PAUSED;
+    const action = isStopped ? 'start' : 'stop';
+
+    try {
+      const resp = await fetch('/api/services/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: s.name, action })
       });
-    }, settings.checkInterval * 1000);
+      const data = await resp.json();
 
-    return () => clearInterval(intervalId);
-  }, [isMonitoring, settings, addLog]);
-
-  const toggleServiceStatus = (id: string) => {
-    setServices(prev => prev.map(s => {
-      if (s.id !== id) return s;
-
-      const newStatus = s.status === ServiceStatus.STOPPED || s.status === ServiceStatus.PAUSED
-        ? ServiceStatus.RUNNING
-        : ServiceStatus.PAUSED;
-
-      addLog('INFO', `User manually changed state of ${s.name} to ${newStatus}`, s.id, s.name);
-      return { ...s, status: newStatus, failCount: 0 };
-    }));
+      if (resp.ok) {
+        addLog('INFO', `Service ${action} command sent for ${s.name}... Waiting for system confirmation.`, s.id, s.name);
+        setServices(prev => prev.map(srv =>
+          srv.id === id ? { ...srv, status: ServiceStatus.RESTARTING } : srv
+        ));
+      } else {
+        addLog('ERROR', `Failed to ${action} ${s.name}: ${data.error || 'Unknown error'}`, s.id, s.name);
+      }
+    } catch (e: any) {
+      addLog('ERROR', `Error toggling ${s.name}: ${e.message}`, s.id, s.name);
+    }
   };
 
   const removeService = (id: string) => {
@@ -212,15 +287,37 @@ const App: React.FC = () => {
     addLog('INFO', 'All services cleared by user action.');
   };
 
+  const restartService = async (id: string) => {
+    const s = services.find(srv => srv.id === id);
+    if (!s) return;
 
-
-  const restartService = (id: string) => {
-    setServices(prev => prev.map(s => {
-      if (s.id !== id) return s;
+    try {
+      setServices(prev => prev.map(srv => srv.id === id ? { ...srv, status: ServiceStatus.RESTARTING } : srv));
       addLog('WARNING', `Manual restart initiated for ${s.name}`, s.id, s.name);
-      return { ...s, status: ServiceStatus.RESTARTING };
-    }));
+
+      const resp = await fetch('/api/services/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: s.name, action: 'restart' })
+      });
+      const data = await resp.json();
+
+      if (resp.ok) {
+        addLog('SUCCESS', `Service ${s.name} restarted successfully.`, s.id, s.name);
+      } else {
+        addLog('ERROR', `Failed to restart ${s.name}: ${data.error || 'Unknown error'}`, s.id, s.name);
+      }
+    } catch (e: any) {
+      addLog('ERROR', `Error restarting ${s.name}: ${e.message}`, s.id, s.name);
+    }
   }
+
+  const clearFailures = (id: string) => {
+    const s = services.find(srv => srv.id === id);
+    if (!s) return;
+    setServices(prev => prev.map(srv => srv.id === id ? { ...srv, failCount: 0 } : srv));
+    addLog('INFO', `Crash alerts acknowledged and failure counter reset for ${s.name}.`, s.id, s.name);
+  };
 
   const handleAIAnalysis = async (log: LogEntry) => {
     setIsAIModalOpen(true);
@@ -286,8 +383,12 @@ const App: React.FC = () => {
         <div className="p-6 border-t border-slate-800/50 bg-slate-950/20">
           <Button
             onClick={() => {
-              setIsMonitoring(!isMonitoring);
-              addLog('INFO', isMonitoring ? 'Monitoring stopped by operational command.' : 'Monitoring engine initialized.');
+              const turningOn = !isMonitoring;
+              setIsMonitoring(turningOn);
+              if (turningOn) {
+                hasLoggedInitialStatus.current = false;
+              }
+              addLog('INFO', turningOn ? 'Monitoring engine initialized. Fetching live statuses...' : 'Monitoring stopped by operational command.');
             }}
             variant={isMonitoring ? "destructive" : "primary"}
             className={`w-full h-14 text-xs font-black uppercase tracking-[0.2em] transition-all duration-500 ${isMonitoring ? 'border-red-500/30 text-red-500 hover:bg-red-500 hover:text-white' : ''}`}
@@ -307,8 +408,8 @@ const App: React.FC = () => {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto bg-[#000410] flex flex-col w-full relative">
-        <header className="h-auto py-[1em] border-b border-slate-800 flex items-center justify-between px-10 bg-[#000410]/80 backdrop-blur-xl sticky top-0 z-10 w-full transition-all duration-300">
+      <main className="flex-1 overflow-hidden bg-[#000410] flex flex-col w-full relative">
+        <header className="h-auto py-[1em] border-b border-slate-800 flex items-center justify-between px-10 bg-[#000410]/80 backdrop-blur-xl z-10 w-full transition-all duration-300 shrink-0">
           <div className="flex flex-col min-w-[200px]">
             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 mb-0.5">Navigation Context</span>
             <h2 className="text-lg font-black text-slate-100 uppercase tracking-tighter">
@@ -356,7 +457,7 @@ const App: React.FC = () => {
               <div className="h-4 w-px bg-slate-800" />
 
               <span className="text-[10px] font-mono font-bold text-slate-500 tracking-wider">
-                v0.0.3-beta
+                v0.0.4-beta
               </span>
 
               <div className="h-4 w-px bg-slate-800" />
@@ -371,7 +472,16 @@ const App: React.FC = () => {
           </div>
         </header>
 
-        <div className="p-10 flex-1">
+        <div className="p-10 flex-1 overflow-y-auto min-h-0 flex flex-col">
+          {isAdmin === false && (
+            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/50 flex flex-col md:flex-row gap-4 items-center animate-fade-in shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+              <Shield size={32} className="text-red-500 shrink-0 animate-pulse" />
+              <div>
+                <h3 className="text-red-400 font-bold text-sm tracking-widest uppercase mb-1">Insufficient Privileges (Non-Administrator)</h3>
+                <p className="text-slate-300 text-xs">UptimeSHIELD is currently running as a normal user. You MUST start your Node terminal as Administrator before running <code>npm run dev</code> or else Start, Stop, and Auto-Restart operations will fail with "Access Denied".</p>
+              </div>
+            </div>
+          )}
           {activeView === 'overview' && <Overview services={services} />}
           {activeView === 'services' && (
             <Services
@@ -379,6 +489,7 @@ const App: React.FC = () => {
               onToggleStatus={toggleServiceStatus}
               onRemove={removeService}
               onClearAll={clearAllServices}
+              onClearFailures={clearFailures}
               onAdd={(serviceData: any) => {
                 const newId = Math.random().toString(36).substr(2, 5);
                 const newService: Service = {

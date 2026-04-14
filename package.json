@@ -1,7 +1,7 @@
 {
   "name": "uptimeshield",
   "private": true,
-  "version": "0.0.3-beta",
+  "version": "0.0.4-beta",
   "type": "module",
   "scripts": {
     "predev": "powershell -ExecutionPolicy Bypass -File ./server/scripts/ensure-certs.ps1",

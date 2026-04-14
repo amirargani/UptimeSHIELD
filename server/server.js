@@ -3,6 +3,7 @@ const { exec } = require("child_process");
 const os = require("os");
 const https = require("https");
 const http = require("http");
+const tls = require("tls");
 const fs = require("fs");
 const path = require("path");
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
@@ -13,6 +14,19 @@ app.use(express.json());
 const PORT = 3001;
 const CONFIG_PATH = path.join(__dirname, "config.json");
 const USE_HTTPS = process.env.USE_HTTPS !== 'false';
+
+const safeReadConfig = () => {
+    if (!fs.existsSync(CONFIG_PATH)) return {};
+    try {
+        const content = fs.readFileSync(CONFIG_PATH, 'utf8').trim();
+        if (!content) return {};
+        const cleanContent = content.startsWith('\uFEFF') ? content.slice(1) : content;
+        return JSON.parse(cleanContent);
+    } catch (err) {
+        console.error(`[server] config.json parse error: ${err.message}`);
+        return null;
+    }
+};
 
 // Allow CORS if needed, or rely on Vite proxy
 app.use((req, res, next) => {
@@ -53,21 +67,61 @@ app.get("/api/services", (req, res) => {
     });
 });
 
+app.post("/api/services/status", (req, res) => {
+    const names = req.body.names;
+    if (!names || !Array.isArray(names) || names.length === 0) {
+        return res.json([]);
+    }
+
+    // Safely construct a comma-separated list of names wrapped in quotes
+    const escapedNames = names.map(n => `'${n.replace(/'/g, "''")}'`).join(",");
+    const query = `Get-Service -Name ${escapedNames} -ErrorAction SilentlyContinue | Select-Object Name, @{Name='State';Expression={$_.Status.ToString()}} | ConvertTo-Json`;
+
+    exec(`powershell -Command "${query}"`, { maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
+        try {
+            if (!stdout.trim()) return res.json([]);
+            const services = JSON.parse(stdout);
+            res.json(Array.isArray(services) ? services : [services]);
+        } catch (err) {
+            console.error("JSON Parse Error in /api/services/status:", err);
+            res.status(500).send("Parsing error");
+        }
+    });
+});
+
+app.post("/api/services/action", (req, res) => {
+    const { name, action } = req.body;
+    if (!name || !['start', 'stop', 'restart'].includes(action)) {
+        return res.status(400).json({ error: "Invalid action or missing name" });
+    }
+
+    const safeName = name.replace(/'/g, "''");
+    const psAction = action === 'start' ? 'Start-Service' : action === 'restart' ? 'Restart-Service' : 'Stop-Service';
+    const command = `${psAction} -Name '${safeName}'`;
+
+    exec(`powershell -Command "${command}"`, (error, stdout, stderr) => {
+        if (error) {
+            console.error(`Service Action Error (${action} on ${name}):`, error.message, stderr);
+            return res.status(500).json({ error: error.message || stderr });
+        }
+        res.json({ success: true });
+    });
+});
+
 app.get("/api/config", (req, res) => {
     console.log("[server] GET /api/config reached");
-    if (fs.existsSync(CONFIG_PATH)) {
-        try {
-            const content = fs.readFileSync(CONFIG_PATH, 'utf8').trim();
-            // Remove BOM if present (rare but possible with some tools)
-            const cleanContent = content.startsWith('\uFEFF') ? content.slice(1) : content;
-            const config = JSON.parse(cleanContent);
-            return res.json(config);
-        } catch (err) {
-            console.error(`[server] config.json parse error: ${err.message}`);
-            return res.status(500).send(`Error reading configuration: ${err.message}`);
-        }
+    const config = safeReadConfig();
+    if (config === null) {
+        return res.status(500).send("Error reading configuration: Invalid JSON format");
     }
-    res.json({});
+    res.json(config);
+});
+
+app.get("/api/admin/check", (req, res) => {
+    // Determine admin status using Windows command `net session` (fails if not elevated)
+    exec("net session", (error) => {
+        res.json({ isAdmin: !error });
+    });
 });
 
 app.post("/api/config", (req, res) => {
@@ -83,6 +137,12 @@ app.post("/api/config", (req, res) => {
     try {
         fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
         console.log(`[server] Config updated and saved to ${CONFIG_PATH}`);
+
+        // Refresh auto-renewal task dynamically based on the updated config
+        if (typeof startAutoRenewCheck === 'function') {
+            startAutoRenewCheck();
+        }
+
         res.json({ success: true });
     } catch (err) {
         console.error("[server] Error writing config:", err);
@@ -113,15 +173,11 @@ app.get("/api/certs/status", (req, res) => {
     }
 
     let passphrase = "password";
-    if (fs.existsSync(CONFIG_PATH)) {
-        try {
-            const content = fs.readFileSync(CONFIG_PATH, 'utf8').trim();
-            const cleanContent = content.startsWith('\uFEFF') ? content.slice(1) : content;
-            const config = JSON.parse(cleanContent);
-            if (config.certPassword) passphrase = config.certPassword;
-        } catch (e) {
-            console.error("[server] Failed to parse config.json for status:", e.message);
-        }
+    const config = safeReadConfig();
+    if (config && config.certPassword) {
+        passphrase = config.certPassword;
+    } else if (config === null) {
+        console.error("[server] Failed to parse config.json for status status.");
     }
 
     // Use EncodedCommand to avoid quoting/interpolation issues with special characters in passwords
@@ -208,19 +264,63 @@ const hasPfx = fs.existsSync(pfxPath);
 
 if (USE_HTTPS && hasPfx) {
     let passphrase = "password";
-    if (fs.existsSync(CONFIG_PATH)) {
-        try {
-            const content = fs.readFileSync(CONFIG_PATH, 'utf8').trim();
-            const cleanContent = content.startsWith('\uFEFF') ? content.slice(1) : content;
-            const config = JSON.parse(cleanContent);
-            if (config.certPassword) passphrase = config.certPassword;
-        } catch (e) {
-            console.error("[server] Failed to read config.json for passphrase:", e.message);
-        }
+    const config = safeReadConfig();
+    if (config && config.certPassword) {
+        passphrase = config.certPassword;
+    } else if (config === null) {
+        console.error("[server] CRITICAL: Failed to read config.json for passphrase. This may cause SSL startup failure.");
     }
+
+    let secureContext = null;
+    const reloadSecureContext = () => {
+        try {
+            let currentPassphrase = passphrase;
+            const freshConfig = safeReadConfig();
+            if (freshConfig && freshConfig.certPassword) {
+                currentPassphrase = freshConfig.certPassword;
+            }
+            if (fs.existsSync(pfxPath)) {
+                secureContext = tls.createSecureContext({
+                    pfx: fs.readFileSync(pfxPath),
+                    passphrase: currentPassphrase
+                });
+                console.log("[server] SSL Secure Context successfully loaded/reloaded.");
+            }
+        } catch (err) {
+            console.error("[server] Failed to load/reload SSL Secure Context:", err);
+        }
+    };
+    reloadSecureContext();
+
+    // Watch the certificate file so we can hot-reload without restarting the node server
+    fs.watchFile(pfxPath, (curr, prev) => {
+        if (curr.mtimeMs !== prev.mtimeMs) {
+            console.log("[server] Detected cert.pfx change. Reloading SSL context in 1s...");
+            setTimeout(() => {
+                reloadSecureContext();
+                // If running in dev mode, force Vite to restart so the frontend proxy gets the new certificate
+                const viteConfigPath = path.join(__dirname, '..', 'vite.config.ts');
+                if (fs.existsSync(viteConfigPath)) {
+                    try {
+                        const now = new Date();
+                        fs.utimesSync(viteConfigPath, now, now);
+                        console.log("[server] Triggered Vite Dev Server restart to sync SSL certs.");
+                    } catch (e) {
+                        console.error("[server] Failed to trigger Vite restart:", e);
+                    }
+                }
+            }, 1000); // 1s delay to let writers release locks
+        }
+    });
+
     const options = {
-        pfx: fs.readFileSync(pfxPath),
-        passphrase: passphrase
+        SNICallback: (domain, cb) => {
+            if (secureContext) {
+                cb(null, secureContext);
+            } else {
+                cb(new Error("No secure context setup"));
+            }
+        }
     };
     https.createServer(options, app).listen(PORT, "0.0.0.0", () => {
         printServerStarted("https");
@@ -234,9 +334,11 @@ if (USE_HTTPS && hasPfx) {
     });
 }
 
-// Background Certificate Maintenance (runs every 24 hours)
-const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
-setInterval(() => {
+// Background Certificate Maintenance
+let autoRenewInterval = null;
+const CHECK_INTERVAL = 15 * 60 * 1000; // 15 minutes
+
+function runCertRenewalCheck() {
     console.log("[server] [Background] Checking certificate for auto-renewal...");
     const scriptPath = path.join(__dirname, "scripts", "ensure-certs.ps1");
     // Standard run (no -Force) lets the script check the daysRemaining and autoRenewCert toggle
@@ -251,15 +353,47 @@ setInterval(() => {
             if (stdout.trim()) console.log("[server] [Background] Result:", stdout.trim());
         }
     });
-}, TWENTY_FOUR_HOURS);
+}
+
+function startAutoRenewCheck() {
+    if (autoRenewInterval) {
+        clearInterval(autoRenewInterval);
+        autoRenewInterval = null;
+    }
+
+    let autoRenew = true;
+    const config = safeReadConfig();
+    if (config && config.autoRenewCert === false) {
+        autoRenew = false;
+    }
+
+    if (!autoRenew) {
+        console.log("[server] [Background] Certificate auto-renewal is INACTIVE.");
+        return;
+    }
+
+    console.log("[server] [Background] Certificate auto-renewal is ACTIVE. Background timer scheduled (runs every 15 minutes).");
+    autoRenewInterval = setInterval(runCertRenewalCheck, CHECK_INTERVAL);
+}
+
+// Start immediately on sever boot
+startAutoRenewCheck();
 
 function printServerStarted(protocol) {
     console.log("");
-    console.log(`  \x1b[36m➜\x1b[0m  \x1b[1mLocal:\x1b[22m   \x1b[36m${protocol}://localhost:${PORT}/\x1b[0m`);
+    console.log(`  \x1b[36m➜\x1b[0m  \x1b[1mUptimeSHIELD Server Started\x1b[22m`);
+
+    const endpoints = [];
+    endpoints.push({ Name: "Local UI", URL: `${protocol}://localhost:${PORT}/` });
+
     const networkIPs = getNetworkIPs();
     networkIPs.forEach(ip => {
-        console.log(`  \x1b[36m➜\x1b[0m  \x1b[1mNetwork:\x1b[22m \x1b[36m${protocol}://${ip}:${PORT}/\x1b[0m`);
+        endpoints.push({ Name: `Network UI (${ip})`, URL: `${protocol}://${ip}:${PORT}/` });
     });
-    console.log(`  \x1b[36m➜\x1b[0m  \x1b[1mAPI Services:\x1b[22m \x1b[36m${protocol}://localhost:${PORT}/api/services\x1b[0m`);
-    console.log(`  \x1b[36m➜\x1b[0m  \x1b[1mCert Status:\x1b[22m \x1b[36m${protocol}://localhost:${PORT}/api/certs/status\x1b[0m`);
+
+    endpoints.push({ Name: "API Services", URL: `${protocol}://localhost:${PORT}/api/services` });
+    endpoints.push({ Name: "API Config", URL: `${protocol}://localhost:${PORT}/api/config` });
+    endpoints.push({ Name: "API Cert Status", URL: `${protocol}://localhost:${PORT}/api/certs/status` });
+
+    console.table(endpoints);
 }

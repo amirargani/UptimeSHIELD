@@ -1,6 +1,6 @@
 import React from 'react';
 import { Service, ServiceStatus } from '../types';
-import { Play, Square, RotateCw, Trash2, Plus, Zap, AlertOctagon, Download, Upload, Eye, Info, AlertTriangle } from 'lucide-react';
+import { Play, Square, RotateCw, Trash2, Plus, Zap, AlertOctagon, Download, Upload, Eye, Info, AlertTriangle, ChevronDown, Eraser } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
@@ -19,10 +19,11 @@ interface ServicesProps {
     onAdd: (service: any) => void;
     onImport: (services: Service[]) => void;
     onRestart: (id: string) => void;
+    onClearFailures: (id: string) => void;
     onClearAll?: () => void;
 }
 
-export const Services: React.FC<ServicesProps> = ({ services, onToggleStatus, onRemove, onAdd, onImport, onRestart, onClearAll }) => {
+export const Services: React.FC<ServicesProps> = ({ services, onToggleStatus, onRemove, onAdd, onImport, onRestart, onClearFailures, onClearAll }) => {
     const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = React.useState(false);
     const [isPathModalOpen, setIsPathModalOpen] = React.useState(false);
@@ -251,7 +252,7 @@ export const Services: React.FC<ServicesProps> = ({ services, onToggleStatus, on
                     <TableBody>
                         {services.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={4} className="py-5 text-center text-slate-600 font-bold uppercase tracking-widest italic">
+                                <TableCell colSpan={4} className="text-slate-700 text-center italic font-medium">
                                     [EMPTY] No services configured.
                                 </TableCell>
                             </TableRow>
@@ -265,7 +266,7 @@ export const Services: React.FC<ServicesProps> = ({ services, onToggleStatus, on
                                     <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest truncate max-w-[250px]">{service.description}</div>
                                 </TableCell>
                                 <TableCell>
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-4">
                                         <div className="flex flex-col">
                                             <span className="text-[10px] font-black text-slate-600 uppercase">Failures</span>
                                             <span className={`text-sm font-black ${service.failCount > 0 ? 'text-red-500' : 'text-slate-500'}`}>
@@ -308,6 +309,17 @@ export const Services: React.FC<ServicesProps> = ({ services, onToggleStatus, on
                                                 title="Restart Service"
                                             >
                                                 <RotateCw size={14} />
+                                            </Button>
+                                            
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => onClearFailures(service.id)}
+                                                disabled={service.failCount === 0}
+                                                className={`w-10 h-10 rounded-full transition-all duration-300 text-slate-500 ${service.failCount > 0 ? 'hover:bg-red-500 hover:text-amber-500 hover:border-red-500' : 'opacity-30 cursor-not-allowed'}`}
+                                                title="Clear Failure Count"
+                                            >
+                                                <Eraser size={14} />
                                             </Button>
                                         </div>
 
@@ -504,19 +516,24 @@ const AddServiceForm: React.FC<AddServiceFormProps> = ({ existingServices, onSho
         <form onSubmit={handleSubmit} className="space-y-6">
             <div>
                 <Label>Auto-Detected Services</Label>
-                <select
-                    onChange={handleTemplateChange}
-                    disabled={isLoadingServices}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer"
-                    defaultValue=""
-                >
-                    <option value="" disabled>{isLoadingServices ? 'SCANNING ENGINE...' : '-- SELECT SOURCE --'}</option>
-                    {availableServices.map((s, idx) => (
-                        <option key={`${s.Name}-${idx}`} value={s.Name}>
-                            {s.DisplayName} ({s.Name})
-                        </option>
-                    ))}
-                </select>
+                <div className="relative">
+                    <select
+                        onChange={handleTemplateChange}
+                        disabled={isLoadingServices}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer pr-10"
+                        defaultValue=""
+                    >
+                        <option value="" disabled>{isLoadingServices ? 'SCANNING ENGINE...' : '-- SELECT SOURCE --'}</option>
+                        {availableServices.map((s, idx) => (
+                            <option key={`${s.Name}-${idx}`} value={s.Name}>
+                                {s.DisplayName} ({s.Name})
+                            </option>
+                        ))}
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-500">
+                        <ChevronDown size={16} />
+                    </div>
+                </div>
                 <p className="mt-2 text-[10px] font-bold text-slate-600 uppercase tracking-widest">Only external services are displayed</p>
             </div>
 

@@ -59,9 +59,25 @@ if (Test-Path $configPath) {
         }
     }
     catch {
-        Write-Host "[certs] Failed to parse config.json. Using recovery Enterprise-strength password." -ForegroundColor Yellow
+        Write-Host "[certs] Failed to parse config.json (possibly corrupted or empty). Re-initializing config..." -ForegroundColor Yellow
         $password = New-StrongPassword
-        $needsNewCert = $true # Force sync
+        $needsNewCert = $true
+        $recoveredConfig = @{
+            emailNotifications = $true
+            recipientEmail = "admin@UptimeSHIELD.local"
+            smtpServer = "smtp.local"
+            smtpPort = 587
+            smtpUser = ""
+            smtpPassword = ""
+            checkInterval = 10
+            autoRestart = $true
+            maxRetries = 3
+            certValidityDays = $validityDays
+            autoRenewCert = $true
+            certPassword = $password
+            services = @()
+        }
+        [System.IO.File]::WriteAllText($configPath, ($recoveredConfig | ConvertTo-Json), $utf8NoBom)
     }
 }
 else {
@@ -140,31 +156,6 @@ else {
 
 # 3. Generation Logic
 if ($needsNewCert) {
-    # Cleanup: Remove any previous UptimeSHIELD certs from Root and My stores
-    Write-Host "[certs] Cleaning up previous 'UptimeSHIELD' certificates..." -ForegroundColor Cyan
-    $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-    $isElevated = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-    
-    $storeNames = @("Root", "My")
-    $storeLocations = @("CurrentUser")
-    if ($isElevated) { $storeLocations += "LocalMachine" }
-
-    foreach ($loc in $storeLocations) {
-        foreach ($name in $storeNames) {
-            try {
-                $store = New-Object System.Security.Cryptography.X509Certificates.X509Store($name, $loc)
-                $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
-                $certsToRemove = $store.Certificates | Where-Object { $_.Subject -like "*CN=UptimeSHIELD*" }
-                foreach ($oldCert in $certsToRemove) {
-                    Write-Host "[certs] Removing old cert from ${loc}\${name}: $($oldCert.Thumbprint)" -ForegroundColor Yellow
-                    $store.Remove($oldCert)
-                }
-                $store.Close()
-            } catch {
-                Write-Host "[certs] Could not clean store ${loc}\${name}: $($_.Exception.Message)" -ForegroundColor Gray
-            }
-        }
-    }
 
     if (Get-Command openssl -ErrorAction SilentlyContinue) {
         Write-Host "[certs] Using OpenSSL..." -ForegroundColor Cyan
@@ -178,9 +169,9 @@ if ($needsNewCert) {
     else {
         Write-Host "[certs] OpenSSL not found. Using PowerShell (Native Windows)..." -ForegroundColor Cyan
         $expiryDate = (Get-Date).AddDays($validityDays)
-        $cert = New-SelfSignedCertificate -DnsName @("localhost") -CertStoreLocation "Cert:\CurrentUser\My" -Type Custom -KeySpec Signature -Subject "CN=UptimeSHIELD" -NotAfter $expiryDate
+        $cert = New-SelfSignedCertificate -DnsName @("localhost") -CertStoreLocation "Cert:\CurrentUser\My" -Subject "CN=UptimeSHIELD" -NotAfter $expiryDate -TextExtension @("2.5.29.19={text}ca=true&pathlength=1")
         $secPassword = ConvertTo-SecureString -String $password -Force -AsPlainText
-        Export-PfxCertificate -Cert $cert -FilePath $pfxPath -Password $secPassword
+        Export-PfxCertificate -Cert $cert -FilePath $pfxPath -Password $secPassword -Force
     }
 }
 
@@ -195,6 +186,31 @@ try {
     # Check if we are Admin
     $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
     $isElevated = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
+    # ---------------------------
+    # Global Cleanup of stale certificates
+    # ---------------------------
+    $storeNames = @("Root", "My", "CA")
+    $storeLocations = @("CurrentUser")
+    if ($isElevated) { $storeLocations += "LocalMachine" }
+
+    foreach ($loc in $storeLocations) {
+        foreach ($name in $storeNames) {
+            try {
+                $store = New-Object System.Security.Cryptography.X509Certificates.X509Store($name, $loc)
+                $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+                $strayCerts = $store.Certificates | Where-Object { $_.Subject -like "*CN=UptimeSHIELD*" -and $_.Thumbprint -ne $thumbprint }
+                foreach ($stray in $strayCerts) {
+                    Write-Host "[certs] Removing stray/old cert from ${loc}\${name}: $($stray.Thumbprint)" -ForegroundColor Yellow
+                    $store.Remove($stray)
+                }
+                $store.Close()
+            } catch {
+                # Ignore failures (e.g. standard user can't delete from some locations)
+            }
+        }
+    }
+    # ---------------------------
 
     $alreadyTrusted = $false
     $storeLocations = @("CurrentUser")

@@ -21,7 +21,7 @@ export interface LogEntry {
   timestamp: Date;
   serviceId: string | null;
   serviceName: string | null;
-  level: 'INFO' | 'WARNING' | 'ERROR' | 'SUCCESS';
+  level: 'INFO' | 'WARNING' | 'ERROR' | 'SUCCESS' | string;
   message: string;
 }
 

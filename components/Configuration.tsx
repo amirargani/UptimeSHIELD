@@ -187,7 +187,7 @@ export const Configuration: React.FC<ConfigurationProps> = ({ settings, onSave }
                 onSave(isolatedUpdate);
 
                 // 8. Refresh visual cert details
-                setTimeout(fetchCertStatus, 1500);
+                await fetchCertStatus();
             } else {
                 showToast("Could not regenerate certificate. Check system logs.", "destructive", "Task Failed");
             }
@@ -465,7 +465,16 @@ export const Configuration: React.FC<ConfigurationProps> = ({ settings, onSave }
                             {certStatus && certStatus.hasCert && (
                                 <div className="mt-4 p-4 rounded-xl bg-slate-950/50 space-y-3 animate-fade-in">
                                     <div className="flex items-center justify-between pb-2">
-                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Live Certificate Info</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Live Certificate Info</span>
+                                            <button
+                                                onClick={fetchCertStatus}
+                                                className="text-slate-500 hover:text-slate-300 transition-colors"
+                                                title="Refresh Status"
+                                            >
+                                                <RotateCcw size={12} />
+                                            </button>
+                                        </div>
                                         <Badge
                                             variant={certStatus.isValid ? "success" : "danger"}
                                             animate={certStatus.isValid}
@@ -482,8 +491,8 @@ export const Configuration: React.FC<ConfigurationProps> = ({ settings, onSave }
                                         </div>
                                         <div>
                                             <p className="text-[9px] font-black uppercase tracking-widest text-slate-600">Time Remaining</p>
-                                            <p className={`text-xs font-mono font-bold mt-1 ${certStatus.daysRemaining && certStatus.daysRemaining < 30 ? 'text-amber-500' : 'text-slate-300'}`}>
-                                                {certStatus.daysRemaining} Days
+                                            <p className={`text-xs font-mono font-bold mt-1 text-slate-300`}>
+                                                {certStatus.daysRemaining} {certStatus.daysRemaining === 1 ? 'Day' : 'Days'}
                                             </p>
                                         </div>
                                     </div>
@@ -505,7 +514,31 @@ export const Configuration: React.FC<ConfigurationProps> = ({ settings, onSave }
                                 </div>
                                 <Switch
                                     checked={localSettings.autoRenewCert}
-                                    onChange={(checked) => handleChange('autoRenewCert', checked)}
+                                    onChange={async (checked) => {
+                                        handleChange('autoRenewCert', checked);
+                                        try {
+                                            const configRes = await fetch('/api/config');
+                                            if (!configRes.ok) throw new Error("Could not fetch server configuration");
+                                            const serverConfig = await configRes.json();
+
+                                            const isolatedUpdate = { ...serverConfig, autoRenewCert: checked };
+                                            const saveResponse = await fetch('/api/config', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify(isolatedUpdate),
+                                            });
+
+                                            if (saveResponse.ok) {
+                                                onSave(isolatedUpdate);
+                                                showToast(checked ? "Auto-Renewal Activated." : "Auto-Renewal Deactivated.", "success", "Configuration Saved");
+                                            } else {
+                                                throw new Error("Failed saving setting");
+                                            }
+                                        } catch (error) {
+                                            console.error("Error saving auto-renewal setting:", error);
+                                            showToast("Could not save Auto-Renewal setting.", "destructive", "Sync Error");
+                                        }
+                                    }}
                                     variant="warning"
                                 />
                             </div>

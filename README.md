@@ -1,7 +1,7 @@
 # 🛡️ UptimeSHIELD
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-D22128?style=for-the-badge&logo=apache)](LICENSE.txt)
-[![Version](https://img.shields.io/badge/Version-0.0.3--beta-orange?style=for-the-badge)](https://github.com/amirargani/UptimeSHIELD/releases)
+[![Version](https://img.shields.io/badge/Version-0.0.4--beta-orange?style=for-the-badge)](https://github.com/amirargani/UptimeSHIELD/releases)
 [![Platform](https://img.shields.io/badge/Platform-Windows-0078D4?style=for-the-badge&logo=windows)](https://www.microsoft.com/windows)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
@@ -107,7 +107,7 @@ UptimeSHIELD includes an automated security engine: [`ensure-certs.ps1`].
 
 The project uses environment variables for configuration and security.
 
-- **`.env`**: Global settings. Used for `USE_HTTPS` (defaults to `false` — runs in standard HTTP mode).
+- **`.env`**: Global settings. Used for `USE_HTTPS` (defaults to `false`: runs in standard HTTP mode).
 - **`.env.local`**: Local overrides and sensitive keys (e.g., `GEMINI_API_KEY`). **Do not commit this file.**
 
 ```env
@@ -144,12 +144,21 @@ It covers:
 
 ## 📜 Changelog
 
+### v0.0.4-beta
+
+### 📊 Real-Time Windows Service Monitoring
+- **Live Status Polling**: Replaced simulated monitoring with robust, real-time status polling backed by PowerShell, providing an accurate representation of system health.
+- **Service Control Operations**: Implemented direct `Start`, `Stop`, and `Restart` commands from the UI, utilizing PowerShell to interface securely with Windows Services.
+- **Administrative Handling**: Integrated proper permission checks and execution handling to gracefully perform external operations.
+- **Responsive UI Feedback**: The UI now accurately renders transitional states and provides immediate visual feedback during service lifecycle changes.
+- **Actionable Event Logging**: Enhanced system logging to track and trace all service state changes and control events clearly.
+
 ### v0.0.3-beta
 
 ### 🔗 Persistent Server-Side Configuration
 - **Config API**: Introduced `/api/config` (GET & POST) endpoints in `server.js` to persist application settings to a `config.json` file on the server.
 - **Auto-Sync**: `App.tsx` now loads the configuration from the server on startup and debounce-syncs all setting changes (with a 1-second delay) back to the server, ensuring persistence across restarts.
-- **Race Condition Protection**: Settings load is gated by an `isLoaded` flag — local changes are not synced to the server until the initial server config has been fully fetched and merged.
+- **Race Condition Protection**: Settings load is gated by an `isLoaded` flag: local changes are not synced to the server until the initial server config has been fully fetched and merged.
 - **Sectional Save in Configuration**: `Configuration.tsx` now performs isolated saves per section (Email / Engine). Before saving, it fetches the latest server config and merges only the relevant fields to prevent unintentional overwrites of unrelated settings.
 
 ### 🔐 Certificate Management Overhaul
@@ -172,7 +181,7 @@ It covers:
 ### 🎨 UI Component Enhancements
 - **`Badge` New `warning` Variant**: Added a new `warning` variant (amber colors) to the `Badge` atom for use across Certificate and Engine settings.
 - **`Switch` Multi-Variant Support**: Extended `Switch` component with `success`, `danger`, and `warning` color variants in addition to the existing `primary`, enabling contextual visual feedback.
-- **`Configuration` Toast System**: Replaced generic save states with a full `Toast` notification system — success/error messages appear for 5 seconds with title + message.
+- **`Configuration` Toast System**: Replaced generic save states with a full `Toast` notification system: success/error messages appear for 5 seconds with title and message.
 
 ### v0.0.2-beta
 
